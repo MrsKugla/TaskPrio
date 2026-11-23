@@ -16,6 +16,8 @@ import {
   type EsitoStato,
   type OpzioniStato,
   type Progetto,
+  type MotivoAumento,
+  type PrioritaEffettiva,
   type Task,
 } from "../regole";
 import { ETICHETTE_FOCUS, ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, IconaFocus, Pallini } from "./aspetto";
@@ -24,13 +26,27 @@ import { Conferma } from "./Dialoghi";
 type Props = {
   progetto: Progetto;
   task: Task;
+  effettive: Map<string, PrioritaEffettiva>;
   applica: (esito: Esito) => boolean;
   onChiudi: () => void;
   onApri: (taskId: string) => void;
 };
 
+function testoMotivo(motivo: MotivoAumento): string {
+  return motivo.tipo === "blocca"
+    ? `blocca: ${motivo.task.map((t) => t.titolo).join(", ")}`
+    : `presto alta scaduta il ${new Date(motivo.il).toLocaleDateString("it-IT")}`;
+}
+
 // Elenco di task cliccabili: un clic apre quella task nella tendina.
-function ElencoTask({ titolo, vuoto, task, onApri }: { titolo: string; vuoto: string; task: Task[]; onApri: (id: string) => void }) {
+function ElencoTask(props: {
+  titolo: string;
+  vuoto: string;
+  task: Task[];
+  effettive: Map<string, PrioritaEffettiva>;
+  onApri: (id: string) => void;
+}) {
+  const { titolo, vuoto, task, effettive, onApri } = props;
   return (
     <section className="elenco-task">
       <h3>{titolo}</h3>
@@ -41,7 +57,7 @@ function ElencoTask({ titolo, vuoto, task, onApri }: { titolo: string; vuoto: st
           {task.map((t) => (
             <li key={t.id}>
               <button className="voce-task" onClick={() => onApri(t.id)}>
-                <span className={`campione priorita-${t.priorita}`} aria-hidden="true" />
+                <span className={`campione priorita-${effettive.get(t.id)!.priorita}`} aria-hidden="true" />
                 {t.titolo}
               </button>
             </li>
@@ -52,7 +68,7 @@ function ElencoTask({ titolo, vuoto, task, onApri }: { titolo: string; vuoto: st
   );
 }
 
-export function Tendina({ progetto, task, applica, onChiudi, onApri }: Props) {
+export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri }: Props) {
   // Il titolo si modifica in locale: un titolo vuoto non si salva e all'uscita dal campo torna quello salvato.
   // Chi usa la tendina le dà key={task.id}, così il campo riparte a ogni cambio di task.
   const [titolo, setTitolo] = useState(task.titolo);
@@ -87,6 +103,7 @@ export function Tendina({ progetto, task, applica, onChiudi, onApri }: Props) {
   };
 
   const fatta = task.stato === "fatta";
+  const effettiva = effettive.get(task.id)!;
 
   return (
     <aside className="tendina" aria-label="Dettagli della task">
@@ -132,7 +149,15 @@ export function Tendina({ progetto, task, applica, onChiudi, onApri }: Props) {
         </label>
 
         <fieldset>
-          <legend>Priorità</legend>
+          <legend>Priorità scelta</legend>
+          {effettiva.motivi.length > 0 && (
+            <p className={`priorita-effettiva priorita-${effettiva.priorita}`}>
+              <span className="campione" aria-hidden="true" />
+              <span>
+                ↑ {ETICHETTE_PRIORITA[effettiva.priorita]} perché {effettiva.motivi.map(testoMotivo).join("; ")}
+              </span>
+            </p>
+          )}
           {PRIORITA.map((p) => (
             <label key={p} className="scelta">
               <input type="radio" name="priorita" checked={task.priorita === p} onChange={() => modifica({ priorita: p })} />
@@ -181,8 +206,8 @@ export function Tendina({ progetto, task, applica, onChiudi, onApri }: Props) {
         </button>
       )}
 
-      <ElencoTask titolo="Blocca" vuoto="Nessuna task dipende da questa." task={dipendenti(progetto, task.id)} onApri={onApri} />
-      <ElencoTask titolo="Dipende da" vuoto="Non dipende da altre task." task={bloccanti(progetto, task.id)} onApri={onApri} />
+      <ElencoTask titolo="Blocca" vuoto="Nessuna task dipende da questa." task={dipendenti(progetto, task.id)} effettive={effettive} onApri={onApri} />
+      <ElencoTask titolo="Dipende da" vuoto="Non dipende da altre task." task={bloccanti(progetto, task.id)} effettive={effettive} onApri={onApri} />
 
       <button className="pericolo elimina-task" onClick={() => setConfermaElimina(true)}>
         Elimina task

@@ -11,12 +11,15 @@ use tauri::{Manager, State};
 struct Db(Mutex<Connection>);
 
 const CHIAVE_ULTIMO_PROGETTO: &str = "ultimo_progetto";
+const CHIAVE_GIORNI_PRESTO_ALTA: &str = "giorni_presto_alta";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DatiSalvati {
     progetti: Vec<Value>,
     ultimo_progetto_id: Option<String>,
+    // Assente finché non si cambia nelle Impostazioni: il valore predefinito lo decide il modulo regole.
+    giorni_presto_alta: Option<u32>,
 }
 
 fn apri(percorso: &std::path::Path) -> rusqlite::Result<Connection> {
@@ -40,14 +43,21 @@ fn carica(conn: &Connection) -> rusqlite::Result<DatiSalvati> {
             })
         })
         .collect::<rusqlite::Result<Vec<Value>>>()?;
-    let ultimo_progetto_id = conn
-        .query_row(
-            "SELECT valore FROM impostazioni WHERE chiave = ?1",
-            [CHIAVE_ULTIMO_PROGETTO],
-            |riga| riga.get(0),
-        )
-        .optional()?;
-    Ok(DatiSalvati { progetti, ultimo_progetto_id })
+    let leggi = |chiave: &str| -> rusqlite::Result<Option<String>> {
+        conn.query_row("SELECT valore FROM impostazioni WHERE chiave = ?1", [chiave], |riga| riga.get(0))
+            .optional()
+    };
+    let ultimo_progetto_id = leggi(CHIAVE_ULTIMO_PROGETTO)?;
+    let giorni_presto_alta = leggi(CHIAVE_GIORNI_PRESTO_ALTA)?.and_then(|v| v.parse().ok());
+    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta })
+}
+
+fn scrivi_impostazione(conn: &Connection, chiave: &str, valore: &str) -> rusqlite::Result<usize> {
+    conn.execute(
+        "INSERT INTO impostazioni (chiave, valore) VALUES (?1, ?2)
+         ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore",
+        params![chiave, valore],
+    )
 }
 
 #[tauri::command]
@@ -87,14 +97,17 @@ fn elimina_progetto(db: State<Db>, id: String) -> Result<(), String> {
 fn imposta_ultimo_progetto(db: State<Db>, id: Option<String>) -> Result<(), String> {
     let conn = db.0.lock().unwrap();
     let esito = match id {
-        Some(id) => conn.execute(
-            "INSERT INTO impostazioni (chiave, valore) VALUES (?1, ?2)
-             ON CONFLICT(chiave) DO UPDATE SET valore = excluded.valore",
-            params![CHIAVE_ULTIMO_PROGETTO, id],
-        ),
+        Some(id) => scrivi_impostazione(&conn, CHIAVE_ULTIMO_PROGETTO, &id),
         None => conn.execute("DELETE FROM impostazioni WHERE chiave = ?1", [CHIAVE_ULTIMO_PROGETTO]),
     };
     esito.map(|_| ()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn imposta_giorni_presto_alta(db: State<Db>, giorni: u32) -> Result<(), String> {
+    scrivi_impostazione(&db.0.lock().unwrap(), CHIAVE_GIORNI_PRESTO_ALTA, &giorni.to_string())
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -111,7 +124,8 @@ pub fn run() {
             carica_dati,
             salva_progetto,
             elimina_progetto,
-            imposta_ultimo_progetto
+            imposta_ultimo_progetto,
+            imposta_giorni_presto_alta
         ])
         .run(tauri::generate_context!())
         .expect("errore all'avvio di TaskPrio");

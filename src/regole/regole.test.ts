@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggiungiDipendenza,
+  applicaPrestoAlta,
   bloccanti,
   bloccata,
   cambiaStato,
@@ -9,10 +10,12 @@ import {
   dipendenti,
   eliminaTask,
   modificaTask,
+  prioritaEffettive,
   rimuoviDipendenza,
   rinominaProgetto,
   riapri,
   ripristinaProgetto,
+  type Priorita,
   type Progetto,
 } from "./index";
 
@@ -471,5 +474,122 @@ describe("controsensi", () => {
     expect(cambiaStato(conAFatta, id(base, "B"), "inCorso").tipo).toBe("ok");
     expect(cambiaStato(conAFatta, id(base, "B"), "fatta").tipo).toBe("ok");
     expect(riapri(conAFatta, id(base, "A")).tipo).toBe("ok");
+  });
+});
+
+// Imposta la priorità scelta delle task indicate.
+function conPriorita(progetto: Progetto, priorita: Priorita, ...nomi: string[]): Progetto {
+  return nomi.reduce((p, nome) => {
+    const esito = modificaTask(p, id(p, nome), { priorita });
+    if (esito.tipo !== "ok") throw new Error(`priorità di ${nome} non cambiata`);
+    return esito.progetto;
+  }, progetto);
+}
+
+const effettiva = (progetto: Progetto, titolo: string) => prioritaEffettive(progetto).get(id(progetto, titolo))!;
+
+// Le task nascono a «ora»; un giorno sono 24 ore.
+const dopoGiorni = (giorni: number) => new Date(ora.getTime() + giorni * 24 * 60 * 60 * 1000);
+
+describe("priorità effettiva: presto alta", () => {
+  it("una presto alta ancora da fare diventa alta al giorno N, non prima", () => {
+    const progetto = conPriorita(progettoConTask("A"), "prestoAlta", "A");
+
+    const alNonoGiorno = applicaPrestoAlta(progetto, dopoGiorni(9), 10);
+    expect(effettiva(alNonoGiorno, "A")).toEqual({ priorita: "prestoAlta", motivi: [] });
+
+    const alDecimoGiorno = applicaPrestoAlta(progetto, dopoGiorni(10), 10);
+    expect(effettiva(alDecimoGiorno, "A")).toEqual({
+      priorita: "alta",
+      motivi: [{ tipo: "prestoAltaScaduta", il: dopoGiorni(10).toISOString() }],
+    });
+  });
+
+  it("il passaggio ad alta è definitivo: resta alta anche messa in corso e con i giorni cambiati", () => {
+    const scaduta = applicaPrestoAlta(conPriorita(progettoConTask("A"), "prestoAlta", "A"), dopoGiorni(10), 10);
+    const inCorso = conStato(scaduta, "inCorso", "A");
+
+    const dopo = applicaPrestoAlta(inCorso, dopoGiorni(11), 30);
+
+    expect(effettiva(dopo, "A").priorita).toBe("alta");
+  });
+
+  it("una presto alta già in corso al giorno N non scatta", () => {
+    const progetto = conStato(conPriorita(progettoConTask("A"), "prestoAlta", "A"), "inCorso", "A");
+
+    expect(effettiva(applicaPrestoAlta(progetto, dopoGiorni(20), 10), "A")).toEqual({ priorita: "prestoAlta", motivi: [] });
+  });
+
+  it("scegliere un'altra priorità annulla lo scatto: vale la nuova scelta", () => {
+    const scaduta = applicaPrestoAlta(conPriorita(progettoConTask("A"), "prestoAlta", "A"), dopoGiorni(10), 10);
+
+    expect(effettiva(conPriorita(scaduta, "bassa", "A"), "A")).toEqual({ priorita: "bassa", motivi: [] });
+  });
+});
+
+describe("priorità effettiva: task bloccante", () => {
+  it("una bloccante sale di un livello sopra la più alta delle task che blocca", () => {
+    const base = conDipendenze(progettoConTask("A", "Media", "PrestoAlta"), ["A", "Media"], ["A", "PrestoAlta"]);
+    const progetto = conPriorita(conPriorita(base, "bassa", "A"), "prestoAlta", "PrestoAlta");
+
+    const a = effettiva(progetto, "A");
+
+    expect(a.priorita).toBe("alta");
+    expect(a.motivi).toEqual([{ tipo: "blocca", task: [progetto.task[2]] }]);
+  });
+
+  it("bloccare una media porta a presto alta, non oltre", () => {
+    const progetto = conPriorita(conDipendenze(progettoConTask("A", "B"), ["A", "B"]), "bassa", "A");
+
+    expect(effettiva(progetto, "A").priorita).toBe("prestoAlta");
+  });
+
+  it("bloccare un'alta porta ad alta, il massimo", () => {
+    const progetto = conPriorita(conDipendenze(progettoConTask("A", "B"), ["A", "B"]), "alta", "B");
+
+    expect(effettiva(progetto, "A")).toEqual({ priorita: "alta", motivi: [{ tipo: "blocca", task: [progetto.task[1]] }] });
+  });
+
+  it("una bloccante già più alta delle task che blocca resta alla sua scelta", () => {
+    const base = conDipendenze(progettoConTask("A", "B"), ["A", "B"]);
+    const progetto = conPriorita(conPriorita(base, "alta", "A"), "bassa", "B");
+
+    expect(effettiva(progetto, "A")).toEqual({ priorita: "alta", motivi: [] });
+  });
+
+  it("vale a catena: A → B → task alta rende alte A e B", () => {
+    const base = conDipendenze(progettoConTask("A", "B", "Urgente"), ["A", "B"], ["B", "Urgente"]);
+    const progetto = conPriorita(conPriorita(base, "bassa", "A", "B"), "alta", "Urgente");
+
+    expect(effettiva(progetto, "B")).toEqual({ priorita: "alta", motivi: [{ tipo: "blocca", task: [progetto.task[2]] }] });
+    expect(effettiva(progetto, "A")).toEqual({ priorita: "alta", motivi: [{ tipo: "blocca", task: [progetto.task[1]] }] });
+  });
+
+  it("la catena sale di un livello a ogni passo", () => {
+    const base = conDipendenze(progettoConTask("A", "B", "C"), ["A", "B"], ["B", "C"]);
+    const progetto = conPriorita(base, "bassa", "A", "B", "C");
+
+    expect([effettiva(progetto, "C"), effettiva(progetto, "B"), effettiva(progetto, "A")].map((e) => e.priorita)).toEqual([
+      "bassa",
+      "media",
+      "prestoAlta",
+    ]);
+  });
+
+  it("una presto alta scaduta vale come alta per le sue bloccanti", () => {
+    const base = conPriorita(conDipendenze(progettoConTask("A", "B"), ["A", "B"]), "prestoAlta", "B");
+    const progetto = applicaPrestoAlta(conPriorita(base, "bassa", "A"), dopoGiorni(10), 10);
+
+    expect(effettiva(progetto, "A").priorita).toBe("alta");
+  });
+
+  it("le task fatte non contano: chiuse le bloccate, la priorità torna alla scelta", () => {
+    const base = conDipendenze(progettoConTask("A", "B", "C"), ["A", "B"], ["A", "C"]);
+    const progetto = conPriorita(conPriorita(base, "bassa", "A", "C"), "alta", "B");
+
+    const conBFatta = conStato(progetto, "fatta", "B");
+    expect(effettiva(conBFatta, "A").priorita).toBe("media");
+
+    expect(effettiva(conStato(conBFatta, "fatta", "C"), "A")).toEqual({ priorita: "bassa", motivi: [] });
   });
 });

@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { creaProgetto, ripristinaProgetto, rinominaProgetto, type Esito, type Progetto } from "../regole";
+import {
+  GIORNI_PRESTO_ALTA_PREDEFINITI,
+  applicaPrestoAlta,
+  creaProgetto,
+  prioritaEffettive,
+  ripristinaProgetto,
+  rinominaProgetto,
+  type Esito,
+  type PrioritaEffettiva,
+  type Progetto,
+} from "../regole";
 import * as persistenza from "../persistenza";
 import { Grafo } from "./Grafo";
 import { Conferma, ChiediTesto } from "./Dialoghi";
@@ -13,6 +23,9 @@ type Dialogo =
   | { tipo: "elimina"; progetto: Progetto }
   | null;
 
+// Ogni quanto si ricontrolla la scadenza delle presto alta con l'app aperta.
+const INTERVALLO_SCADENZE_MS = 60 * 60 * 1000;
+
 export function App() {
   const [progetti, setProgetti] = useState<Progetto[] | null>(null);
   const [attivoId, setAttivoId] = useState<string | null>(null);
@@ -21,6 +34,8 @@ export function App() {
   const [errore, setErrore] = useState<string | null>(null);
   const [versione, setVersione] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [giorniPrestoAlta, setGiorniPrestoAlta] = useState(GIORNI_PRESTO_ALTA_PREDEFINITI);
+  const [controlloScadenze, setControlloScadenze] = useState(0);
 
   useEffect(() => {
     getVersion().then(setVersione);
@@ -31,13 +46,31 @@ export function App() {
       .caricaDati()
       .then((dati) => {
         setProgetti(dati.progetti.map(ripristinaProgetto));
+        setGiorniPrestoAlta(dati.giorniPrestoAlta ?? GIORNI_PRESTO_ALTA_PREDEFINITI);
         const ultimo = dati.progetti.find((p) => p.id === dati.ultimoProgettoId) ?? dati.progetti[0];
         setAttivoId(ultimo?.id ?? null);
       })
       .catch((e) => setErrore(`Impossibile caricare i dati: ${e}`));
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => setControlloScadenze((n) => n + 1), INTERVALLO_SCADENZE_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   const segnalaErrore = (e: unknown) => setErrore(`Salvataggio non riuscito: ${e}`);
+
+  // Le presto alta scadute si memorizzano nel progetto: lo scatto è definitivo, anche se poi cambiano i giorni.
+  // applicaPrestoAlta restituisce lo stesso progetto se nulla scade, quindi l'effetto non si ripete all'infinito.
+  useEffect(() => {
+    if (!progetti) return;
+    const ora = new Date();
+    const aggiornati = progetti.map((p) => applicaPrestoAlta(p, ora, giorniPrestoAlta));
+    const scaduti = aggiornati.filter((p, i) => p !== progetti[i]);
+    if (scaduti.length === 0) return;
+    setProgetti(aggiornati);
+    for (const p of scaduti) persistenza.salvaProgetto(p).catch(segnalaErrore);
+  }, [progetti, giorniPrestoAlta, controlloScadenze]);
 
   const seleziona = (id: string | null) => {
     setAttivoId(id);
@@ -71,6 +104,12 @@ export function App() {
   };
 
   const attivo = progetti?.find((p) => p.id === attivoId) ?? null;
+  const effettive = useMemo(() => (attivo ? prioritaEffettive(attivo) : new Map<string, PrioritaEffettiva>()), [attivo]);
+
+  const cambiaGiorniPrestoAlta = (giorni: number) => {
+    setGiorniPrestoAlta(giorni);
+    persistenza.impostaGiorniPrestoAlta(giorni).catch(segnalaErrore);
+  };
   const taskAperta = pagina === "home" ? (attivo?.task.find((t) => t.id === taskId) ?? null) : null;
   const chiudiTendina = useCallback(() => setTaskId(null), []);
 
@@ -100,6 +139,37 @@ export function App() {
         {pagina === "impostazioni" ? (
           <section className="impostazioni">
             <h2>Impostazioni</h2>
+            {/* Si salva all'uscita dal campo o con Invio, non a ogni tasto: scrivendo «20» passerebbe da «2»
+                e le presto alta più vecchie di 2 giorni diventerebbero alte per sempre. */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                (e.currentTarget.elements.namedItem("giorni") as HTMLInputElement).blur();
+              }}
+            >
+              <label>
+                Giorni prima che una presto alta diventi alta
+                <input
+                  // La key fa ripartire il campo quando il valore salvato arriva o cambia.
+                  key={giorniPrestoAlta}
+                  name="giorni"
+                  type="number"
+                  min={1}
+                  step={1}
+                  defaultValue={giorniPrestoAlta}
+                  onBlur={(e) => {
+                    const giorni = Number(e.target.value);
+                    if (Number.isInteger(giorni) && giorni >= 1 && giorni !== giorniPrestoAlta) cambiaGiorniPrestoAlta(giorni);
+                    // Un valore non valido non si salva: torna quello salvato.
+                    else e.target.value = String(giorniPrestoAlta);
+                  }}
+                />
+              </label>
+            </form>
+            <p className="nota">
+              Contati dalla creazione della task, se è ancora da fare. Il passaggio ad alta è definitivo: cambiare i giorni non
+              lo annulla.
+            </p>
           </section>
         ) : progetti === null ? (
           <p className="vuoto">Caricamento…</p>
@@ -128,7 +198,14 @@ export function App() {
               </button>
             </header>
             {attivo ? (
-              <Grafo key={attivo.id} progetto={attivo} applica={applica} selezionataId={taskAperta?.id ?? null} onSeleziona={setTaskId} />
+              <Grafo
+                key={attivo.id}
+                progetto={attivo}
+                effettive={effettive}
+                applica={applica}
+                selezionataId={taskAperta?.id ?? null}
+                onSeleziona={setTaskId}
+              />
             ) : (
               <p className="vuoto">Crea un progetto per iniziare.</p>
             )}
@@ -137,7 +214,15 @@ export function App() {
       </main>
 
       {attivo && taskAperta && (
-        <Tendina key={taskAperta.id} progetto={attivo} task={taskAperta} applica={applica} onChiudi={chiudiTendina} onApri={setTaskId} />
+        <Tendina
+          key={taskAperta.id}
+          progetto={attivo}
+          task={taskAperta}
+          effettive={effettive}
+          applica={applica}
+          onChiudi={chiudiTendina}
+          onApri={setTaskId}
+        />
       )}
 
       {dialogo?.tipo === "nuovo" && (

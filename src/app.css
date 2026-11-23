@@ -105,6 +105,21 @@ button:disabled {
   padding: 12px 24px;
 }
 
+.impostazioni label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.impostazioni input[type="number"] {
+  width: 5em;
+}
+
+.nota {
+  color: #616e7c;
+  font-size: 13px;
+}
+
 .errore {
   display: flex;
   justify-content: space-between;
@@ -325,6 +340,21 @@ button:disabled {
   display: inline-flex;
   gap: 4px;
   font-size: 11px;
+}
+
+/* Freccetta ↑: la priorità effettiva è stata alzata dalle regole rispetto alla scelta. */
+.simbolo-alzata {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Nella tendina: priorità effettiva e motivo, sopra la priorità scelta. */
+.priorita-effettiva {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-weight: 600;
 }
 
 /* Pallino sul bordo destro: da qui si trascina una dipendenza verso un'altra task. */

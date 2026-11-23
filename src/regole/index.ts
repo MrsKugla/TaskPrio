@@ -31,6 +31,8 @@ export type Task = AttributiTask & {
   posizione: Posizione;
   creataIl: string;
   stato: Stato;
+  // Data in cui la presto alta è scaduta: da lì la task resta alta, anche se poi va in corso.
+  prestoAltaScadutaIl?: string;
 };
 
 // La task «dipendenteId» non può partire prima che «bloccanteId» sia fatta.
@@ -111,6 +113,8 @@ export function modificaTask(progetto: Progetto, taskId: string, modifiche: Part
   if (!attuale) return rifiutato("La task non esiste più.");
   if (attuale.stato === "fatta") return rifiutato("Una task fatta non si modifica: riaprila prima.");
   const aggiornata: Task = { ...attuale, ...modifiche };
+  // Una nuova scelta di priorità annulla lo scatto della presto alta: le regole ripartono dalla scelta.
+  if (modifiche.priorita !== undefined && modifiche.priorita !== attuale.priorita) delete aggiornata.prestoAltaScadutaIl;
   if (modifiche.titolo !== undefined) {
     aggiornata.titolo = modifiche.titolo.trim();
     if (!aggiornata.titolo) return rifiutato("Il titolo della task non può essere vuoto.");
@@ -231,4 +235,70 @@ export function riapri(progetto: Progetto, taskId: string, opzioni: OpzioniStato
     };
   }
   return impostaStato(progetto, taskId, "inCorso");
+}
+
+export const GIORNI_PRESTO_ALTA_PREDEFINITI = 10;
+const MS_AL_GIORNO = 24 * 60 * 60 * 1000;
+
+// Una presto alta ancora da fare scade dopo «giorni» giorni dalla creazione e da lì resta alta per sempre.
+// Restituisce lo stesso progetto se nessuna task scade, così chi chiama sa se c'è da salvare.
+export function applicaPrestoAlta(progetto: Progetto, ora: Date, giorni: number): Progetto {
+  let cambiato = false;
+  const task = progetto.task.map((t) => {
+    if (t.priorita !== "prestoAlta" || t.stato !== "daFare" || t.prestoAltaScadutaIl) return t;
+    const scadenza = new Date(new Date(t.creataIl).getTime() + giorni * MS_AL_GIORNO);
+    if (ora < scadenza) return t;
+    cambiato = true;
+    return { ...t, prestoAltaScadutaIl: scadenza.toISOString() };
+  });
+  return cambiato ? { ...progetto, task } : progetto;
+}
+
+// Perché una regola ha alzato la priorità: presto alta scaduta, oppure le task non fatte più alte che la task blocca.
+export type MotivoAumento = { tipo: "prestoAltaScaduta"; il: string } | { tipo: "blocca"; task: Task[] };
+
+// «motivi» è vuoto se la priorità effettiva è quella scelta.
+export type PrioritaEffettiva = { priorita: Priorita; motivi: MotivoAumento[] };
+
+// PRIORITA va dall'alta alla bassa: un indice più piccolo è una priorità più alta.
+const livello = (p: Priorita) => PRIORITA.indexOf(p);
+
+// Priorità effettiva di ogni task, per id: il massimo tra la scelta e le regole, che possono solo alzarla.
+// La regola della bloccante parte dalle effettive delle task che blocca: la visita in profondità le calcola prima,
+// così vale a catena. Le dipendenze non hanno cerchi, quindi la visita finisce.
+export function prioritaEffettive(progetto: Progetto): Map<string, PrioritaEffettiva> {
+  const perId = new Map(progetto.task.map((t) => [t.id, t]));
+  const risultato = new Map<string, PrioritaEffettiva>();
+
+  const calcola = (t: Task): PrioritaEffettiva => {
+    const giaCalcolata = risultato.get(t.id);
+    if (giaCalcolata) return giaCalcolata;
+
+    const candidati: { livello: number; motivo: MotivoAumento }[] = [];
+    if (t.prestoAltaScadutaIl) candidati.push({ livello: livello("alta"), motivo: { tipo: "prestoAltaScaduta", il: t.prestoAltaScadutaIl } });
+
+    const bloccate = progetto.dipendenze
+      .filter((d) => d.bloccanteId === t.id)
+      .map((d) => perId.get(d.dipendenteId)!)
+      .filter((b) => b.stato !== "fatta")
+      .map((b) => ({ task: b, livello: livello(calcola(b).priorita) }));
+    if (bloccate.length > 0) {
+      const piuAlta = Math.min(...bloccate.map((b) => b.livello));
+      candidati.push({
+        livello: Math.max(piuAlta - 1, livello("alta")),
+        motivo: { tipo: "blocca", task: bloccate.filter((b) => b.livello === piuAlta).map((b) => b.task) },
+      });
+    }
+
+    const migliore = Math.min(livello(t.priorita), ...candidati.map((c) => c.livello));
+    const effettiva: PrioritaEffettiva =
+      migliore < livello(t.priorita)
+        ? { priorita: PRIORITA[migliore], motivi: candidati.filter((c) => c.livello === migliore).map((c) => c.motivo) }
+        : { priorita: t.priorita, motivi: [] };
+    risultato.set(t.id, effettiva);
+    return effettiva;
+  };
+
+  for (const t of progetto.task) calcola(t);
+  return risultato;
 }

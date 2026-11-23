@@ -1,16 +1,20 @@
 import { Handle, Position, useConnection, type Node, type NodeProps } from "@xyflow/react";
-import type { Task } from "../regole";
+import type { PrioritaEffettiva, Task } from "../regole";
 import { ETICHETTE_PRIORITA, ETICHETTE_STATO, IconaFocus, Pallini } from "./aspetto";
 
-export type NodoTask = Node<{ task: Task; bloccata: boolean }, "task">;
+export type NodoTask = Node<{ task: Task; effettiva: PrioritaEffettiva; bloccata: boolean }, "task">;
 
-export function NodoTask({ id, data: { task, bloccata }, selected }: NodeProps<NodoTask>) {
+export function NodoTask({ id, data: { task, effettiva, bloccata }, selected }: NodeProps<NodoTask>) {
   // Durante un trascinamento partito da un'altra task, tutto il nodo diventa il punto d'arrivo.
   const bersaglio = useConnection((c) => c.inProgress && c.fromNode.id !== id);
+  const alzata = effettiva.motivi.length > 0;
+  const priorita = alzata
+    ? `${ETICHETTE_PRIORITA[effettiva.priorita]} (scelta: ${ETICHETTE_PRIORITA[task.priorita]})`
+    : ETICHETTE_PRIORITA[task.priorita];
   return (
     <div
-      className={`nodo-task priorita-${task.priorita} stato-${task.stato}${selected ? " selezionato" : ""}`}
-      title={`Priorità: ${ETICHETTE_PRIORITA[task.priorita]} · Stato: ${ETICHETTE_STATO[task.stato]}`}
+      className={`nodo-task priorita-${effettiva.priorita} stato-${task.stato}${selected ? " selezionato" : ""}`}
+      title={`Priorità: ${priorita} · Stato: ${ETICHETTE_STATO[task.stato]}`}
     >
       <Handle
         type="target"
@@ -21,6 +25,11 @@ export function NodoTask({ id, data: { task, bloccata }, selected }: NodeProps<N
       <div className="nodo-titolo">
         {task.titolo}
         <span className="simboli">
+          {alzata && (
+            <span className="simbolo-alzata" role="img" aria-label="Priorità alzata" title="Priorità alzata dalle regole">
+              ↑
+            </span>
+          )}
           {bloccata && (
             <span role="img" aria-label="Bloccata" title="Bloccata: dipende da una task non fatta">
               🔒
@@ -42,7 +51,7 @@ export function NodoTask({ id, data: { task, bloccata }, selected }: NodeProps<N
         position={Position.Right}
         isConnectableEnd={false}
         className="partenza-dipendenza"
-        title="Trascina su un'altra task: quella dipenderà da questa"
+        title="Trascina sulla task da cui questa dipende"
       />
     </div>
   );

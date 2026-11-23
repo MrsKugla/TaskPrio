@@ -9,12 +9,23 @@ import {
   type Edge,
   type OnEdgesChange,
 } from "@xyflow/react";
-import { aggiungiDipendenza, bloccata, creaTask, rimuoviDipendenza, type Esito, type Posizione, type Progetto, type Task } from "../regole";
+import {
+  aggiungiDipendenza,
+  bloccata,
+  creaTask,
+  rimuoviDipendenza,
+  type Esito,
+  type Posizione,
+  type PrioritaEffettiva,
+  type Progetto,
+  type Task,
+} from "../regole";
 import { Avviso } from "./Dialoghi";
 import { NodoTask } from "./NodoTask";
 
 type Props = {
   progetto: Progetto;
+  effettive: Map<string, PrioritaEffettiva>;
   applica: (esito: Esito) => boolean;
   selezionataId: string | null;
   onSeleziona: (taskId: string) => void;
@@ -22,13 +33,13 @@ type Props = {
 
 const tipiNodo = { task: NodoTask };
 
-// Freccia dalla task bloccante (source) alla task che dipende da lei (target).
+// Freccia dalla task che dipende (source) alla task da cui dipende (target): la freccia indica la dipendenza.
 const idFreccia = (bloccanteId: string, dipendenteId: string) => `${bloccanteId}->${dipendenteId}`;
 
 // Task in attesa di titolo: posizione nel grafo e punto dello schermo dove mostrare il campo.
 type Bozza = { posizione: Posizione; schermo: { x: number; y: number } };
 
-function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) {
+function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona }: Props) {
   const { screenToFlowPosition } = useReactFlow();
   const [bozza, setBozza] = useState<Bozza | null>(null);
   const [titolo, setTitolo] = useState("");
@@ -42,12 +53,12 @@ function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) 
         id: t.id,
         type: "task",
         position: t.posizione,
-        data: { task: t, bloccata: bloccata(progetto, t.id) },
+        data: { task: t, effettiva: effettive.get(t.id)!, bloccata: bloccata(progetto, t.id) },
         selected: t.id === selezionataId,
         // Una task si elimina solo dalla tendina, con conferma: Canc vale solo per le frecce.
         deletable: false,
       })),
-    [progetto, selezionataId],
+    [progetto, effettive, selezionataId],
   );
 
   const frecce = useMemo<Edge[]>(
@@ -56,8 +67,8 @@ function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) 
         const id = idFreccia(bloccanteId, dipendenteId);
         return {
           id,
-          source: bloccanteId,
-          target: dipendenteId,
+          source: dipendenteId,
+          target: bloccanteId,
           selected: frecceSelezionate.has(id),
           markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
         };
@@ -79,7 +90,7 @@ function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) 
 
   const suEliminaFrecce = (eliminate: Edge[]) => {
     const esito = eliminate.reduce<Esito>(
-      (e, f) => (e.tipo === "ok" ? rimuoviDipendenza(e.progetto, f.source, f.target) : e),
+      (e, f) => (e.tipo === "ok" ? rimuoviDipendenza(e.progetto, f.target, f.source) : e),
       { tipo: "ok", progetto },
     );
     applica(esito);
@@ -117,7 +128,7 @@ function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) 
         onNodeClick={(_, nodo) => onSeleziona(nodo.id)}
         onEdgesChange={suCambioFrecce}
         onEdgesDelete={suEliminaFrecce}
-        onConnect={({ source, target }) => collega(source, target)}
+        onConnect={({ source, target }) => collega(target, source)}
         // Canc sulle tastiere italiane è «Delete». Con una finestra di dialogo aperta non si elimina nulla.
         deleteKeyCode={["Delete", "Backspace"]}
         onBeforeDelete={async () => !document.querySelector("dialog[open]")}
