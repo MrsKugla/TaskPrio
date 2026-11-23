@@ -3,6 +3,7 @@ import {
   aggiungiDipendenza,
   bloccanti,
   bloccata,
+  cambiaStato,
   creaProgetto,
   creaTask,
   dipendenti,
@@ -10,6 +11,7 @@ import {
   modificaTask,
   rimuoviDipendenza,
   rinominaProgetto,
+  riapri,
   ripristinaProgetto,
   type Progetto,
 } from "./index";
@@ -348,5 +350,126 @@ describe("bloccata", () => {
     expect(progetto.dipendenze).toEqual([]);
     expect(progetto.task[0].stato).toBe("daFare");
     expect(bloccata(progetto, "t1")).toBe(false);
+  });
+});
+
+// Porta le task indicate allo stato voluto, confermando gli eventuali controsensi.
+function conStato(progetto: Progetto, stato: "inCorso" | "fatta", ...nomi: string[]): Progetto {
+  return nomi.reduce((p, nome) => {
+    const esito = cambiaStato(p, id(p, nome), stato, { confermato: true });
+    if (esito.tipo !== "ok") throw new Error(`stato di ${nome} non cambiato`);
+    return esito.progetto;
+  }, progetto);
+}
+
+const statoDi = (progetto: Progetto, titolo: string) => progetto.task.find((t) => t.titolo === titolo)!.stato;
+
+describe("stati", () => {
+  it("una task libera passa da fare → in corso → fatta senza conferme", () => {
+    const progetto = progettoConTask("A", "B");
+
+    const inCorso = cambiaStato(progetto, id(progetto, "A"), "inCorso");
+    expect(inCorso.tipo).toBe("ok");
+    if (inCorso.tipo !== "ok") return;
+    expect(statoDi(inCorso.progetto, "A")).toBe("inCorso");
+    expect(statoDi(inCorso.progetto, "B")).toBe("daFare");
+
+    const fatta = cambiaStato(inCorso.progetto, id(progetto, "A"), "fatta");
+    expect(fatta.tipo).toBe("ok");
+    if (fatta.tipo !== "ok") return;
+    expect(statoDi(fatta.progetto, "A")).toBe("fatta");
+  });
+
+  it("una task in corso può tornare da fare", () => {
+    const progetto = conStato(progettoConTask("A"), "inCorso", "A");
+    const esito = cambiaStato(progetto, id(progetto, "A"), "daFare");
+
+    expect(esito.tipo).toBe("ok");
+    if (esito.tipo !== "ok") return;
+    expect(statoDi(esito.progetto, "A")).toBe("daFare");
+  });
+
+  it("una task fatta non cambia stato né attributi finché non si riapre", () => {
+    const progetto = conStato(progettoConTask("A"), "fatta", "A");
+
+    expect(cambiaStato(progetto, id(progetto, "A"), "inCorso").tipo).toBe("rifiutato");
+    expect(cambiaStato(progetto, id(progetto, "A"), "daFare").tipo).toBe("rifiutato");
+    expect(modificaTask(progetto, id(progetto, "A"), { titolo: "Altro" }).tipo).toBe("rifiutato");
+  });
+
+  it("«Riapri» porta una task fatta in corso", () => {
+    const progetto = conStato(progettoConTask("A"), "fatta", "A");
+    const esito = riapri(progetto, id(progetto, "A"));
+
+    expect(esito.tipo).toBe("ok");
+    if (esito.tipo !== "ok") return;
+    expect(statoDi(esito.progetto, "A")).toBe("inCorso");
+    expect(modificaTask(esito.progetto, id(progetto, "A"), { titolo: "Altro" }).tipo).toBe("ok");
+  });
+
+  it("rifiuta di riaprire una task non fatta o inesistente", () => {
+    const progetto = progettoConTask("A");
+    expect(riapri(progetto, id(progetto, "A")).tipo).toBe("rifiutato");
+    expect(riapri(progetto, "inesistente").tipo).toBe("rifiutato");
+    expect(cambiaStato(progetto, "inesistente", "fatta").tipo).toBe("rifiutato");
+  });
+});
+
+describe("controsensi", () => {
+  it("segnare fatta una task che dipende da una non fatta chiede conferma e nomina le task aperte", () => {
+    const progetto = conDipendenze(progettoConTask("Vernice", "Pennelli", "Imbiancare"), ["Vernice", "Imbiancare"], ["Pennelli", "Imbiancare"]);
+    const conUnaFatta = conStato(progetto, "fatta", "Pennelli");
+
+    const esito = cambiaStato(conUnaFatta, id(progetto, "Imbiancare"), "fatta");
+
+    expect(esito.tipo).toBe("richiedeConferma");
+    if (esito.tipo !== "richiedeConferma") return;
+    expect(esito.controsenso).toContain("Vernice");
+    expect(esito.controsenso).not.toContain("Pennelli");
+  });
+
+  it("mettere in corso una task bloccata chiede conferma", () => {
+    const progetto = conDipendenze(progettoConTask("A", "B"), ["A", "B"]);
+    expect(cambiaStato(progetto, id(progetto, "B"), "inCorso").tipo).toBe("richiedeConferma");
+  });
+
+  it("riaprire una task da cui dipendono task già fatte chiede conferma e nomina quelle fatte", () => {
+    const base = conDipendenze(progettoConTask("A", "B", "C"), ["A", "B"], ["A", "C"]);
+    const progetto = conStato(base, "fatta", "A", "B");
+
+    const esito = riapri(progetto, id(progetto, "A"));
+
+    expect(esito.tipo).toBe("richiedeConferma");
+    if (esito.tipo !== "richiedeConferma") return;
+    expect(esito.controsenso).toContain("B");
+    expect(esito.controsenso).not.toContain("C");
+  });
+
+  it("confermando, ognuno dei tre controsensi si applica", () => {
+    const base = conDipendenze(progettoConTask("A", "B"), ["A", "B"]);
+    const opzioni = { confermato: true };
+
+    const inCorso = cambiaStato(base, id(base, "B"), "inCorso", opzioni);
+    if (inCorso.tipo !== "ok") throw new Error("in corso non applicato");
+    expect(statoDi(inCorso.progetto, "B")).toBe("inCorso");
+
+    const fatta = cambiaStato(base, id(base, "B"), "fatta", opzioni);
+    if (fatta.tipo !== "ok") throw new Error("fatta non applicata");
+    expect(statoDi(fatta.progetto, "B")).toBe("fatta");
+
+    const tutteFatte = conStato(base, "fatta", "A", "B");
+    const riaperta = riapri(tutteFatte, id(base, "A"), opzioni);
+    if (riaperta.tipo !== "ok") throw new Error("riapertura non applicata");
+    expect(statoDi(riaperta.progetto, "A")).toBe("inCorso");
+  });
+
+  it("nessuna conferma quando le dipendenze sono fatte o le dipendenti non lo sono", () => {
+    const base = conDipendenze(progettoConTask("A", "B"), ["A", "B"]);
+    const conAFatta = conStato(base, "fatta", "A");
+
+    expect(bloccata(conAFatta, id(base, "B"))).toBe(false);
+    expect(cambiaStato(conAFatta, id(base, "B"), "inCorso").tipo).toBe("ok");
+    expect(cambiaStato(conAFatta, id(base, "B"), "fatta").tipo).toBe("ok");
+    expect(riapri(conAFatta, id(base, "A")).tipo).toBe("ok");
   });
 });

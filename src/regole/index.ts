@@ -22,8 +22,9 @@ export type AttributiTask = {
   atomica: boolean;
 };
 
-// Stato scelto a mano; i cambi di stato arrivano col ticket 04, per ora ogni task nasce da fare.
-export type Stato = "daFare" | "inCorso" | "fatta";
+// Stato scelto a mano. Una task fatta è in sola lettura finché non si riapre.
+export const STATI = ["daFare", "inCorso", "fatta"] as const;
+export type Stato = (typeof STATI)[number];
 
 export type Task = AttributiTask & {
   id: string;
@@ -45,6 +46,10 @@ export type Progetto = {
 
 // «cerchio» elenca, in ordine, le task di una dipendenza rifiutata perché chiuderebbe un cerchio.
 export type Esito = { tipo: "ok"; progetto: Progetto } | { tipo: "rifiutato"; motivo: string; cerchio?: Task[] };
+
+// Un cambio di stato che è un controsenso non viene applicato: si ripete con «confermato» dopo il «Sei sicura?».
+export type EsitoStato = Esito | { tipo: "richiedeConferma"; controsenso: string };
+export type OpzioniStato = { confermato?: boolean };
 
 const VALORI_INIZIALI: Omit<AttributiTask, "titolo"> & { stato: Stato } = {
   descrizione: "",
@@ -104,6 +109,7 @@ export function puoEssereAtomica(costoTempo: CostoTempo): boolean {
 export function modificaTask(progetto: Progetto, taskId: string, modifiche: Partial<AttributiTask>): Esito {
   const attuale = progetto.task.find((t) => t.id === taskId);
   if (!attuale) return rifiutato("La task non esiste più.");
+  if (attuale.stato === "fatta") return rifiutato("Una task fatta non si modifica: riaprila prima.");
   const aggiornata: Task = { ...attuale, ...modifiche };
   if (modifiche.titolo !== undefined) {
     aggiornata.titolo = modifiche.titolo.trim();
@@ -181,4 +187,48 @@ export function rimuoviDipendenza(progetto: Progetto, bloccanteId: string, dipen
 // Bloccata è calcolata, non è uno stato: la task dipende da almeno una task non fatta.
 export function bloccata(progetto: Progetto, taskId: string): boolean {
   return bloccanti(progetto, taskId).some((t) => t.stato !== "fatta");
+}
+
+const elencoTitoli = (task: Task[]) => task.map((t) => `«${t.titolo}»`).join(", ");
+
+function impostaStato(progetto: Progetto, taskId: string, stato: Stato): Esito {
+  return { tipo: "ok", progetto: { ...progetto, task: progetto.task.map((t) => (t.id === taskId ? { ...t, stato } : t)) } };
+}
+
+// Cambia lo stato di una task non fatta. Segnare fatta o mettere in corso una task bloccata chiede conferma.
+export function cambiaStato(progetto: Progetto, taskId: string, stato: Stato, opzioni: OpzioniStato = {}): EsitoStato {
+  const task = progetto.task.find((t) => t.id === taskId);
+  if (!task) return rifiutato("La task non esiste più.");
+  if (task.stato === "fatta") return rifiutato("Una task fatta si riapre con «Riapri».");
+  const aperte = bloccanti(progetto, taskId).filter((t) => t.stato !== "fatta");
+  if (!opzioni.confermato && aperte.length > 0) {
+    if (stato === "fatta") {
+      return {
+        tipo: "richiedeConferma",
+        controsenso: `«${task.titolo}» dipende da task non ancora fatte: ${elencoTitoli(aperte)}. Sei sicura di segnarla fatta?`,
+      };
+    }
+    if (stato === "inCorso" && task.stato !== "inCorso") {
+      return {
+        tipo: "richiedeConferma",
+        controsenso: `«${task.titolo}» è bloccata: dipende da task non ancora fatte: ${elencoTitoli(aperte)}. Sei sicura di metterla in corso?`,
+      };
+    }
+  }
+  return impostaStato(progetto, taskId, stato);
+}
+
+// «Riapri» riporta in corso una task fatta. Se da lei dipendono task già fatte chiede conferma.
+export function riapri(progetto: Progetto, taskId: string, opzioni: OpzioniStato = {}): EsitoStato {
+  const task = progetto.task.find((t) => t.id === taskId);
+  if (!task) return rifiutato("La task non esiste più.");
+  if (task.stato !== "fatta") return rifiutato("Si riapre solo una task fatta.");
+  const fatte = dipendenti(progetto, taskId).filter((t) => t.stato === "fatta");
+  if (!opzioni.confermato && fatte.length > 0) {
+    return {
+      tipo: "richiedeConferma",
+      controsenso: `Da «${task.titolo}» dipendono task già fatte: ${elencoTitoli(fatte)}. Sei sicura di riaprirla?`,
+    };
+  }
+  return impostaStato(progetto, taskId, "inCorso");
 }

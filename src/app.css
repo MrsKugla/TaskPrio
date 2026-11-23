@@ -146,7 +146,8 @@ button:disabled {
   font-size: 18px;
 }
 
-.tendina > label {
+.tendina > label,
+.tendina .campi > label:not(.scelta) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -181,6 +182,18 @@ button:disabled {
   margin-top: 8px;
 }
 
+.tendina fieldset.campi {
+  display: contents;
+}
+
+.tendina fieldset.campi:disabled label {
+  color: #9aa5b1;
+}
+
+.riapri {
+  align-self: flex-start;
+}
+
 /* Colori della priorità, come negli appunti v3. */
 .priorita-alta {
   --priorita: #e03131;
@@ -211,9 +224,20 @@ button:disabled {
   padding: 6px 10px;
   border: 2px solid #52606d;
   border-radius: 6px;
-  /* Il colore dice la priorità; il bordo resta libero per lo stato (ticket 04). */
+  /* Il colore dice la priorità, il bordo lo stato. */
   background: color-mix(in srgb, var(--priorita) 55%, #fff);
   cursor: pointer;
+}
+
+.nodo-task.stato-daFare {
+  border-style: dashed;
+}
+
+/* Fatta: pallida, il colore della priorità quasi sparisce. */
+.nodo-task.stato-fatta {
+  background: color-mix(in srgb, var(--priorita) 15%, #fff);
+  border-color: #b8c0c8;
+  color: #7b8794;
 }
 
 .nodo-task.selezionato {

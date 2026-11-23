@@ -53,6 +53,7 @@ export function ChiediTesto(props: {
 }
 
 export function Conferma(props: {
+  titolo?: string;
   messaggio: string;
   etichettaConferma: string;
   onConferma: () => void;
@@ -60,6 +61,7 @@ export function Conferma(props: {
 }) {
   return (
     <Finestra onAnnulla={props.onAnnulla}>
+      {props.titolo && <h2>{props.titolo}</h2>}
       <p>{props.messaggio}</p>
       <div className="azioni">
         <button autoFocus onClick={props.onAnnulla}>

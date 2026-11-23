@@ -1,6 +1,6 @@
 import { Handle, Position, useConnection, type Node, type NodeProps } from "@xyflow/react";
 import type { Task } from "../regole";
-import { ETICHETTE_PRIORITA, IconaFocus, Pallini } from "./aspetto";
+import { ETICHETTE_PRIORITA, ETICHETTE_STATO, IconaFocus, Pallini } from "./aspetto";
 
 export type NodoTask = Node<{ task: Task; bloccata: boolean }, "task">;
 
@@ -9,8 +9,8 @@ export function NodoTask({ id, data: { task, bloccata }, selected }: NodeProps<N
   const bersaglio = useConnection((c) => c.inProgress && c.fromNode.id !== id);
   return (
     <div
-      className={`nodo-task priorita-${task.priorita}${selected ? " selezionato" : ""}`}
-      title={`Priorità: ${ETICHETTE_PRIORITA[task.priorita]}`}
+      className={`nodo-task priorita-${task.priorita} stato-${task.stato}${selected ? " selezionato" : ""}`}
+      title={`Priorità: ${ETICHETTE_PRIORITA[task.priorita]} · Stato: ${ETICHETTE_STATO[task.stato]}`}
     >
       <Handle
         type="target"
