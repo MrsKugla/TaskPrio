@@ -1,0 +1,155 @@
+:root {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: #1f2933;
+  background: #f5f6f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid #c4c9d0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  height: 100%;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #1f2933;
+}
+
+.menu h1 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: #fff;
+}
+
+.menu button {
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #cbd2d9;
+}
+
+.menu button.attiva {
+  background: #3e4c59;
+  color: #fff;
+}
+
+.centro {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.versione {
+  margin-top: auto;
+  color: #7b8794;
+  font-size: 12px;
+}
+
+.barra {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d9dde2;
+  background: #fff;
+}
+
+.barra select {
+  min-width: 220px;
+}
+
+.grafo {
+  position: relative;
+  flex: 1;
+}
+
+.bozza-task {
+  position: absolute;
+  z-index: 10;
+}
+
+.vuoto {
+  padding: 24px;
+  color: #616e7c;
+}
+
+.impostazioni {
+  padding: 12px 24px;
+}
+
+.errore {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #ffe3e3;
+  color: #a61e1e;
+}
+
+.errore button {
+  border: none;
+  background: transparent;
+}
+
+.tendina {
+  width: 0;
+  border-left: 1px solid #d9dde2;
+  background: #fff;
+}
+
+.dialogo {
+  border: 1px solid #c4c9d0;
+  border-radius: 6px;
+  min-width: 320px;
+}
+
+.dialogo h2 {
+  margin-top: 0;
+  font-size: 16px;
+}
+
+.dialogo label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dialogo .azioni {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pericolo {
+  background: #e03131;
+  border-color: #e03131;
+  color: #fff;
+}

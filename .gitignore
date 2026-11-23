@@ -1,0 +1,43 @@
+# Dipendenze e build
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Note di lavoro e appunti personali (non pubblici)
+*.docx
+AGENTS.md
+TODO.md
+.scratch/
+docs/agents/
+
+# Configurazione locale degli strumenti (percorsi assoluti della macchina)
+script-buttons.json
+
+# Segreti: variabili d'ambiente, chiavi di firma del codice e dell'updater Tauri
+.env
+.env.*
+*.key
+*.key.pub
+*.pem
+*.pfx
+*.p12
+
+# Dati locali dell'app finiti per errore nel progetto
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Log
+*.log
+npm-debug.log*
+
+# Editor e sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store
+~$*
