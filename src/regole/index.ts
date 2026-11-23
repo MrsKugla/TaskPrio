@@ -22,27 +22,37 @@ export type AttributiTask = {
   atomica: boolean;
 };
 
+// Stato scelto a mano; i cambi di stato arrivano col ticket 04, per ora ogni task nasce da fare.
+export type Stato = "daFare" | "inCorso" | "fatta";
+
 export type Task = AttributiTask & {
   id: string;
   posizione: Posizione;
   creataIl: string;
+  stato: Stato;
 };
+
+// La task «dipendenteId» non può partire prima che «bloccanteId» sia fatta.
+export type Dipendenza = { bloccanteId: string; dipendenteId: string };
 
 export type Progetto = {
   id: string;
   nome: string;
   creatoIl: string;
   task: Task[];
+  dipendenze: Dipendenza[];
 };
 
-export type Esito = { tipo: "ok"; progetto: Progetto } | { tipo: "rifiutato"; motivo: string };
+// «cerchio» elenca, in ordine, le task di una dipendenza rifiutata perché chiuderebbe un cerchio.
+export type Esito = { tipo: "ok"; progetto: Progetto } | { tipo: "rifiutato"; motivo: string; cerchio?: Task[] };
 
-const ATTRIBUTI_INIZIALI: Omit<AttributiTask, "titolo"> = {
+const VALORI_INIZIALI: Omit<AttributiTask, "titolo"> & { stato: Stato } = {
   descrizione: "",
   priorita: "media",
   costoFocus: "termometroBlu",
   costoTempo: "da1a4h",
   atomica: false,
+  stato: "daFare",
 };
 
 function rifiutato(motivo: string): Esito {
@@ -52,7 +62,10 @@ function rifiutato(motivo: string): Esito {
 export function creaProgetto(nome: string, ora: Date): Esito {
   const pulito = nome.trim();
   if (!pulito) return rifiutato("Il nome del progetto non può essere vuoto.");
-  return { tipo: "ok", progetto: { id: crypto.randomUUID(), nome: pulito, creatoIl: ora.toISOString(), task: [] } };
+  return {
+    tipo: "ok",
+    progetto: { id: crypto.randomUUID(), nome: pulito, creatoIl: ora.toISOString(), task: [], dipendenze: [] },
+  };
 }
 
 export function rinominaProgetto(progetto: Progetto, nome: string): Esito {
@@ -61,9 +74,13 @@ export function rinominaProgetto(progetto: Progetto, nome: string): Esito {
   return { tipo: "ok", progetto: { ...progetto, nome: pulito } };
 }
 
-// Progetti salvati da versioni precedenti: completa gli attributi mancanti con i valori iniziali.
+// Progetti salvati da versioni precedenti: completa i dati mancanti con i valori iniziali.
 export function ripristinaProgetto(salvato: Progetto): Progetto {
-  return { ...salvato, task: salvato.task.map((t) => ({ ...ATTRIBUTI_INIZIALI, ...t })) };
+  return {
+    ...salvato,
+    task: salvato.task.map((t) => ({ ...VALORI_INIZIALI, ...t })),
+    dipendenze: salvato.dipendenze ?? [],
+  };
 }
 
 export function creaTask(progetto: Progetto, dati: { titolo: string; posizione: Posizione }, ora: Date): Esito {
@@ -72,7 +89,7 @@ export function creaTask(progetto: Progetto, dati: { titolo: string; posizione: 
   const task: Task = {
     id: crypto.randomUUID(),
     titolo,
-    ...ATTRIBUTI_INIZIALI,
+    ...VALORI_INIZIALI,
     posizione: { ...dati.posizione },
     creataIl: ora.toISOString(),
   };
@@ -101,5 +118,67 @@ export function modificaTask(progetto: Progetto, taskId: string, modifiche: Part
 
 export function eliminaTask(progetto: Progetto, taskId: string): Esito {
   if (!progetto.task.some((t) => t.id === taskId)) return rifiutato("La task non esiste più.");
-  return { tipo: "ok", progetto: { ...progetto, task: progetto.task.filter((t) => t.id !== taskId) } };
+  // Con la task spariscono anche le sue dipendenze, in entrambe le direzioni.
+  const dipendenze = progetto.dipendenze.filter((d) => d.bloccanteId !== taskId && d.dipendenteId !== taskId);
+  return { tipo: "ok", progetto: { ...progetto, task: progetto.task.filter((t) => t.id !== taskId), dipendenze } };
+}
+
+// Task da cui dipende la task indicata, nell'ordine del progetto.
+export function bloccanti(progetto: Progetto, taskId: string): Task[] {
+  const ids = new Set(progetto.dipendenze.filter((d) => d.dipendenteId === taskId).map((d) => d.bloccanteId));
+  return progetto.task.filter((t) => ids.has(t.id));
+}
+
+// Task che la task indicata blocca, nell'ordine del progetto.
+export function dipendenti(progetto: Progetto, taskId: string): Task[] {
+  const ids = new Set(progetto.dipendenze.filter((d) => d.bloccanteId === taskId).map((d) => d.dipendenteId));
+  return progetto.task.filter((t) => ids.has(t.id));
+}
+
+// Percorso più breve da «da» ad «a» seguendo le dipendenze (bloccante → dipendente), o null se non c'è.
+function percorso(progetto: Progetto, da: string, a: string): string[] | null {
+  const precedente = new Map<string, string | null>([[da, null]]);
+  const coda = [da];
+  for (let i = 0; i < coda.length; i++) {
+    const corrente = coda[i];
+    if (corrente === a) {
+      const ids: string[] = [];
+      for (let id: string | null = a; id !== null; id = precedente.get(id)!) ids.unshift(id);
+      return ids;
+    }
+    for (const d of progetto.dipendenze) {
+      if (d.bloccanteId === corrente && !precedente.has(d.dipendenteId)) {
+        precedente.set(d.dipendenteId, corrente);
+        coda.push(d.dipendenteId);
+      }
+    }
+  }
+  return null;
+}
+
+export function aggiungiDipendenza(progetto: Progetto, bloccanteId: string, dipendenteId: string): Esito {
+  const esiste = (id: string) => progetto.task.some((t) => t.id === id);
+  if (!esiste(bloccanteId) || !esiste(dipendenteId)) return rifiutato("Le dipendenze sono solo tra task dello stesso progetto.");
+  if (progetto.dipendenze.some((d) => d.bloccanteId === bloccanteId && d.dipendenteId === dipendenteId)) {
+    return rifiutato("Questa dipendenza esiste già.");
+  }
+  // La nuova freccia bloccante → dipendente chiude un cerchio se dal dipendente si arriva già al bloccante.
+  const ids = percorso(progetto, dipendenteId, bloccanteId);
+  if (ids) {
+    const cerchio = ids.map((id) => progetto.task.find((t) => t.id === id)!);
+    const elenco = [...cerchio, cerchio[0]].map((t) => t.titolo).join(" → ");
+    return { tipo: "rifiutato", motivo: `Questa dipendenza chiuderebbe un cerchio: ${elenco}.`, cerchio };
+  }
+  return { tipo: "ok", progetto: { ...progetto, dipendenze: [...progetto.dipendenze, { bloccanteId, dipendenteId }] } };
+}
+
+export function rimuoviDipendenza(progetto: Progetto, bloccanteId: string, dipendenteId: string): Esito {
+  const resto = progetto.dipendenze.filter((d) => d.bloccanteId !== bloccanteId || d.dipendenteId !== dipendenteId);
+  if (resto.length === progetto.dipendenze.length) return rifiutato("La dipendenza non esiste più.");
+  return { tipo: "ok", progetto: { ...progetto, dipendenze: resto } };
+}
+
+// Bloccata è calcolata, non è uno stato: la task dipende da almeno una task non fatta.
+export function bloccata(progetto: Progetto, taskId: string): boolean {
+  return bloccanti(progetto, taskId).some((t) => t.stato !== "fatta");
 }

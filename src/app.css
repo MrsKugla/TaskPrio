@@ -296,3 +296,82 @@ button:disabled {
   border-color: #e03131;
   color: #fff;
 }
+
+.simboli {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 11px;
+}
+
+/* Pallino sul bordo destro: da qui si trascina una dipendenza verso un'altra task. */
+.nodo-task .partenza-dipendenza {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  background: #52606d;
+  cursor: crosshair;
+}
+
+.nodo-task .partenza-dipendenza:hover {
+  background: #1c7ed6;
+}
+
+/* Punto d'arrivo grande quanto il nodo, attivo solo mentre si trascina da un'altra task. */
+.nodo-task .arrivo-dipendenza {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.nodo-task .arrivo-dipendenza.attivo {
+  z-index: 1;
+  pointer-events: all;
+}
+
+.nodo-task .arrivo-dipendenza.attivo:hover {
+  outline: 3px dashed #1c7ed6;
+  outline-offset: 2px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #1c7ed6;
+  stroke-width: 3;
+}
+
+.elenco-task h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.elenco-task ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voce-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: #1c7ed6;
+  cursor: pointer;
+}
+
+.voce-task:hover {
+  text-decoration: underline;
+}
+
+.vuoto-piccolo {
+  margin: 0;
+  color: #7b8794;
+  font-size: 12px;
+}

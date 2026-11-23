@@ -137,7 +137,7 @@ export function App() {
       </main>
 
       {attivo && taskAperta && (
-        <Tendina key={taskAperta.id} progetto={attivo} task={taskAperta} applica={applica} onChiudi={chiudiTendina} />
+        <Tendina key={taskAperta.id} progetto={attivo} task={taskAperta} applica={applica} onChiudi={chiudiTendina} onApri={setTaskId} />
       )}
 
       {dialogo?.tipo === "nuovo" && (

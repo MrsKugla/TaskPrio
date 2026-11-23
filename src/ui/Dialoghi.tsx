@@ -72,3 +72,24 @@ export function Conferma(props: {
     </Finestra>
   );
 }
+
+// Avviso che si può solo chiudere, con un elenco facoltativo (es. le task di un cerchio).
+export function Avviso(props: { messaggio: string; elenco?: string[]; onChiudi: () => void }) {
+  return (
+    <Finestra onAnnulla={props.onChiudi}>
+      <p>{props.messaggio}</p>
+      {props.elenco && (
+        <ol>
+          {props.elenco.map((voce, i) => (
+            <li key={i}>{voce}</li>
+          ))}
+        </ol>
+      )}
+      <div className="azioni">
+        <button autoFocus onClick={props.onChiudi}>
+          OK
+        </button>
+      </div>
+    </Finestra>
+  );
+}

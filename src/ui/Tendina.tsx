@@ -3,6 +3,8 @@ import {
   COSTI_FOCUS,
   COSTI_TEMPO,
   PRIORITA,
+  bloccanti,
+  dipendenti,
   eliminaTask,
   modificaTask,
   puoEssereAtomica,
@@ -19,9 +21,33 @@ type Props = {
   task: Task;
   applica: (esito: Esito) => boolean;
   onChiudi: () => void;
+  onApri: (taskId: string) => void;
 };
 
-export function Tendina({ progetto, task, applica, onChiudi }: Props) {
+// Elenco di task cliccabili: un clic apre quella task nella tendina.
+function ElencoTask({ titolo, vuoto, task, onApri }: { titolo: string; vuoto: string; task: Task[]; onApri: (id: string) => void }) {
+  return (
+    <section className="elenco-task">
+      <h3>{titolo}</h3>
+      {task.length === 0 ? (
+        <p className="vuoto-piccolo">{vuoto}</p>
+      ) : (
+        <ul>
+          {task.map((t) => (
+            <li key={t.id}>
+              <button className="voce-task" onClick={() => onApri(t.id)}>
+                <span className={`campione priorita-${t.priorita}`} aria-hidden="true" />
+                {t.titolo}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function Tendina({ progetto, task, applica, onChiudi, onApri }: Props) {
   // Il titolo si modifica in locale: un titolo vuoto non si salva e all'uscita dal campo torna quello salvato.
   // Chi usa la tendina le dà key={task.id}, così il campo riparte a ogni cambio di task.
   const [titolo, setTitolo] = useState(task.titolo);
@@ -106,6 +132,9 @@ export function Tendina({ progetto, task, applica, onChiudi }: Props) {
         />
         Atomica
       </label>
+
+      <ElencoTask titolo="Blocca" vuoto="Nessuna task dipende da questa." task={dipendenti(progetto, task.id)} onApri={onApri} />
+      <ElencoTask titolo="Dipende da" vuoto="Non dipende da altre task." task={bloccanti(progetto, task.id)} onApri={onApri} />
 
       <button className="pericolo elimina-task" onClick={() => setConfermaElimina(true)}>
         Elimina task
