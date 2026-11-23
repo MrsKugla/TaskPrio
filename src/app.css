@@ -119,9 +119,152 @@ button:disabled {
 }
 
 .tendina {
-  width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 320px;
+  padding: 12px 16px;
+  overflow-y: auto;
   border-left: 1px solid #d9dde2;
   background: #fff;
+}
+
+.tendina header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tendina h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tendina .chiudi {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+}
+
+.tendina > label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tendina textarea {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid #c4c9d0;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.tendina fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  border: 1px solid #d9dde2;
+  border-radius: 4px;
+}
+
+.tendina label.scelta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.elimina-task {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+/* Colori della priorità, come negli appunti v3. */
+.priorita-alta {
+  --priorita: #e03131;
+}
+
+.priorita-prestoAlta {
+  --priorita: #fd7e14;
+}
+
+.priorita-media {
+  --priorita: #fcc419;
+}
+
+.priorita-bassa {
+  --priorita: #40c057;
+}
+
+.campione {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--priorita);
+}
+
+.nodo-task {
+  min-width: 140px;
+  max-width: 220px;
+  padding: 6px 10px;
+  border: 2px solid #52606d;
+  border-radius: 6px;
+  /* Il colore dice la priorità; il bordo resta libero per lo stato (ticket 04). */
+  background: color-mix(in srgb, var(--priorita) 55%, #fff);
+  cursor: pointer;
+}
+
+.nodo-task.selezionato {
+  box-shadow: 0 0 0 3px #1c7ed6;
+}
+
+.nodo-titolo {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.simbolo-atomica {
+  font-size: 11px;
+  color: #52606d;
+}
+
+.nodo-costi {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.icona-focus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+}
+
+.pallini {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.pallino {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #323f4b;
+  border-radius: 50%;
+}
+
+.pallino.pieno {
+  background: #323f4b;
+}
+
+.tendina label.scelta:has(input:disabled) {
+  color: #9aa5b1;
 }
 
 .dialogo {

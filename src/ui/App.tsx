@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
-import { creaProgetto, rinominaProgetto, type Esito, type Progetto } from "../regole";
+import { creaProgetto, ripristinaProgetto, rinominaProgetto, type Esito, type Progetto } from "../regole";
 import * as persistenza from "../persistenza";
 import { Grafo } from "./Grafo";
 import { Conferma, ChiediTesto } from "./Dialoghi";
+import { Tendina } from "./Tendina";
 
 type Pagina = "home" | "impostazioni";
 type Dialogo =
@@ -19,6 +20,7 @@ export function App() {
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [errore, setErrore] = useState<string | null>(null);
   const [versione, setVersione] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion().then(setVersione);
@@ -28,7 +30,7 @@ export function App() {
     persistenza
       .caricaDati()
       .then((dati) => {
-        setProgetti(dati.progetti);
+        setProgetti(dati.progetti.map(ripristinaProgetto));
         const ultimo = dati.progetti.find((p) => p.id === dati.ultimoProgettoId) ?? dati.progetti[0];
         setAttivoId(ultimo?.id ?? null);
       })
@@ -39,6 +41,7 @@ export function App() {
 
   const seleziona = (id: string | null) => {
     setAttivoId(id);
+    setTaskId(null);
     persistenza.impostaUltimoProgetto(id).catch(segnalaErrore);
   };
 
@@ -68,6 +71,8 @@ export function App() {
   };
 
   const attivo = progetti?.find((p) => p.id === attivoId) ?? null;
+  const taskAperta = pagina === "home" ? (attivo?.task.find((t) => t.id === taskId) ?? null) : null;
+  const chiudiTendina = useCallback(() => setTaskId(null), []);
 
   return (
     <div className="layout">
@@ -123,7 +128,7 @@ export function App() {
               </button>
             </header>
             {attivo ? (
-              <Grafo key={attivo.id} progetto={attivo} applica={applica} />
+              <Grafo key={attivo.id} progetto={attivo} applica={applica} selezionataId={taskAperta?.id ?? null} onSeleziona={setTaskId} />
             ) : (
               <p className="vuoto">Crea un progetto per iniziare.</p>
             )}
@@ -131,8 +136,9 @@ export function App() {
         )}
       </main>
 
-      {/* Tendina di destra: spazio riservato, contenuto dal ticket 02. */}
-      <aside className="tendina" />
+      {attivo && taskAperta && (
+        <Tendina key={taskAperta.id} progetto={attivo} task={taskAperta} applica={applica} onChiudi={chiudiTendina} />
+      )}
 
       {dialogo?.tipo === "nuovo" && (
         <ChiediTesto

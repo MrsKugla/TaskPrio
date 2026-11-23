@@ -26,7 +26,7 @@ _Avoid_: status, fase
 Condizione calcolata di una task che dipende da un'altra non ancora fatta; non è uno stato scelto a mano.
 
 **Atomica**:
-Proprietà di una task autoconclusiva, fatta in un solo passaggio e senza test particolari.
+Proprietà di una task autoconclusiva, fatta in un solo passaggio e senza test particolari. Solo con costo tempo < 1h o 1–4h; oltre le 4h una task non può essere atomica.
 _Avoid_: semplice (come priorità)
 
 ## Priorità

@@ -1,20 +1,35 @@
 import { useMemo, useState } from "react";
-import { Background, Controls, ReactFlow, ReactFlowProvider, useReactFlow, type Node } from "@xyflow/react";
+import { Background, Controls, ReactFlow, ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import { creaTask, type Esito, type Posizione, type Progetto } from "../regole";
+import { NodoTask } from "./NodoTask";
 
-type Props = { progetto: Progetto; applica: (esito: Esito) => boolean };
+type Props = {
+  progetto: Progetto;
+  applica: (esito: Esito) => boolean;
+  selezionataId: string | null;
+  onSeleziona: (taskId: string) => void;
+};
+
+const tipiNodo = { task: NodoTask };
 
 // Task in attesa di titolo: posizione nel grafo e punto dello schermo dove mostrare il campo.
 type Bozza = { posizione: Posizione; schermo: { x: number; y: number } };
 
-function GrafoInterno({ progetto, applica }: Props) {
+function GrafoInterno({ progetto, applica, selezionataId, onSeleziona }: Props) {
   const { screenToFlowPosition } = useReactFlow();
   const [bozza, setBozza] = useState<Bozza | null>(null);
   const [titolo, setTitolo] = useState("");
 
-  const nodi = useMemo<Node[]>(
-    () => progetto.task.map((t) => ({ id: t.id, position: t.posizione, data: { label: t.titolo } })),
-    [progetto.task],
+  const nodi = useMemo<NodoTask[]>(
+    () =>
+      progetto.task.map((t) => ({
+        id: t.id,
+        type: "task",
+        position: t.posizione,
+        data: { task: t },
+        selected: t.id === selezionataId,
+      })),
+    [progetto.task, selezionataId],
   );
 
   const chiudiBozza = () => {
@@ -35,7 +50,15 @@ function GrafoInterno({ progetto, applica }: Props) {
         });
       }}
     >
-      <ReactFlow nodes={nodi} zoomOnDoubleClick={false} nodesDraggable={false} nodesConnectable={false} fitView>
+      <ReactFlow
+        nodes={nodi}
+        nodeTypes={tipiNodo}
+        onNodeClick={(_, nodo) => onSeleziona(nodo.id)}
+        zoomOnDoubleClick={false}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        fitView
+      >
         <Background />
         <Controls showInteractive={false} />
       </ReactFlow>
@@ -45,7 +68,11 @@ function GrafoInterno({ progetto, applica }: Props) {
           style={{ left: bozza.schermo.x, top: bozza.schermo.y }}
           onSubmit={(e) => {
             e.preventDefault();
-            if (applica(creaTask(progetto, { titolo, posizione: bozza.posizione }, new Date()))) chiudiBozza();
+            const esito = creaTask(progetto, { titolo, posizione: bozza.posizione }, new Date());
+            if (applica(esito) && esito.tipo === "ok") {
+              chiudiBozza();
+              onSeleziona(esito.progetto.task[esito.progetto.task.length - 1].id);
+            }
           }}
         >
           <input
@@ -54,7 +81,12 @@ function GrafoInterno({ progetto, applica }: Props) {
             placeholder="Titolo della task"
             value={titolo}
             onChange={(e) => setTitolo(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && chiudiBozza()}
+            onKeyDown={(e) => {
+              if (e.key !== "Escape") return;
+              // Esc chiude solo il campo, non la tendina aperta.
+              e.stopPropagation();
+              chiudiBozza();
+            }}
             onBlur={chiudiBozza}
           />
         </form>
