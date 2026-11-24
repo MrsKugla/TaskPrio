@@ -18,12 +18,14 @@ import {
   ESITI,
   aggiungiRischio,
   aggiungiTest,
+  creaTaskDaPianoB,
   eliminaRischio,
   eliminaTest,
   impostaEsito,
   impostaPianoB,
   modificaRischio,
   modificaTest,
+  motivoNonCreaTask,
   pianiBDaEseguire,
   rimuoviPianoB,
   spostaNodoCatena,
@@ -45,13 +47,23 @@ type Props = {
   applica: (esito: Esito) => boolean;
   // Task fatta: la catena si guarda e si dispone, ma non si modifica.
   solaLettura: boolean;
+  // Apre un'altra task nella tendina: la task nata da un piano B.
+  onApri: (taskId: string) => void;
 };
 
 type DatiNodo =
   | { tipo: "task"; titolo: string }
   | { tipo: "rischio"; rischio: Rischio }
   | { tipo: "test"; test: Test; daEseguire: boolean; solaLettura: boolean; onEsito: (esito: EsitoTest) => void }
-  | { tipo: "azione"; testo: string; daEseguire: boolean };
+  | {
+      tipo: "azione";
+      testo: string;
+      daEseguire: boolean;
+      // Task nata da questo piano B, se c'è; altrimenti «onCreaTask» se si può creare ora.
+      taskCreata?: Task;
+      onCreaTask?: () => void;
+      onApri: (taskId: string) => void;
+    };
 type NodoCatena = Node<DatiNodo, "catena">;
 type Misura = { width: number; height: number };
 
@@ -86,11 +98,37 @@ function NodoCatena({ data, selected }: NodeProps<NodoCatena>) {
     );
   }
   if (data.tipo === "azione") {
+    const { taskCreata, onCreaTask, onApri } = data;
     return (
       <div className={`nodo-catena catena-azione${data.daEseguire ? " da-eseguire" : ""}${selezione}`} title={data.testo}>
         <Handle type="target" position={Position.Left} isConnectable={false} />
         <span className="tipo-nodo">Piano B · azione</span>
         <span className="testo-titolo">{data.testo}</span>
+        {taskCreata ? (
+          <button
+            className="task-creata nodrag"
+            title={`Apri la task «${taskCreata.titolo}»`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onApri(taskCreata.id);
+            }}
+          >
+            → {taskCreata.titolo}
+          </button>
+        ) : (
+          onCreaTask && (
+            <button
+              className="crea-task nodrag"
+              title="Crea una task alta che blocca la task di partenza"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreaTask();
+              }}
+            >
+              Crea task
+            </button>
+          )
+        )}
       </div>
     );
   }
@@ -335,7 +373,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
 function GrafoCatena(
   props: Props & { selezione: RifNodo | null; onSeleziona: (rif: RifNodo | null) => void; schermoIntero: boolean; onSchermoIntero: () => void },
 ) {
-  const { progetto, task, applica, solaLettura, selezione, onSeleziona, schermoIntero, onSchermoIntero } = props;
+  const { progetto, task, applica, solaLettura, onApri, selezione, onSeleziona, schermoIntero, onSchermoIntero } = props;
   // Come nel grafo delle task: la posizione trascinata vive qui e si salva al rilascio; le misure si ripassano ai nodi.
   const [trascinate, setTrascinate] = useState<ReadonlyMap<string, Posizione>>(new Map());
   const [misure, setMisure] = useState<ReadonlyMap<string, Misura>>(new Map());
@@ -372,13 +410,20 @@ function GrafoCatena(
                   tipo: "azione",
                   testo: t.pianoB.testo,
                   daEseguire: daEseguire.has(idNodo({ tipo: "azione", id: t.id })),
+                  taskCreata: progetto.task.find((c) => t.pianoB?.tipo === "azione" && c.id === t.pianoB.taskId),
+                  // «Crea task» solo sull'azione di un test fallito, non ancora promossa, se la catena si può modificare.
+                  onCreaTask:
+                    motivoNonCreaTask(t) === undefined && !solaLettura
+                      ? () => applica(creaTaskDaPianoB(progetto, task.id, t.id, new Date()))
+                      : undefined,
+                  onApri,
                 }),
               ]
             : []),
         ]),
       ]),
     ];
-  }, [progetto, task, applica, solaLettura, selezione, trascinate, misure]);
+  }, [progetto, task, applica, solaLettura, onApri, selezione, trascinate, misure]);
 
   const frecce = useMemo<Edge[]>(() => {
     const daEseguire = new Set(pianiBDaEseguire(task).map((p) => p.testId));

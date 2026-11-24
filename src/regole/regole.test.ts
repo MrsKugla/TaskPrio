@@ -22,6 +22,7 @@ import {
   ripristinaProgetto,
   aggiungiRischio,
   aggiungiTest,
+  creaTaskDaPianoB,
   eliminaRischio,
   eliminaTest,
   haRischiAperti,
@@ -1007,5 +1008,68 @@ describe("catena di verifica: piano B", () => {
     const senzaSpugna = ok(eliminaTest(conPiano, taskId, spugna));
     expect(rischiDi(senzaSpugna, taskId)[0].test.map((t) => t.titolo)).toEqual(["Igrometro"]);
     expect(testDi(senzaSpugna, taskId, igrometro).pianoB).toBeUndefined();
+  });
+});
+
+describe("catena di verifica: crea task da piano B", () => {
+  // Imbiancare ha il test Igrometro fallito con il piano B azione «Deumidificatore».
+  function conAzioneFallita() {
+    const c = conCatena();
+    const conAzione = ok(impostaPianoB(c.progetto, c.taskId, c.igrometro, { tipo: "azione", testo: "Deumidificatore" }));
+    return { ...c, progetto: ok(impostaEsito(conAzione, c.taskId, c.igrometro, "fallito")) };
+  }
+
+  it("crea una task alta col titolo del piano B, che blocca la task di partenza, e la collega al piano B", () => {
+    const { progetto, taskId, igrometro } = conAzioneFallita();
+
+    const promosso = ok(creaTaskDaPianoB(progetto, taskId, igrometro, ora));
+
+    expect(promosso.task).toHaveLength(3);
+    const nuova = promosso.task.find((t) => t.titolo === "Deumidificatore")!;
+    expect(nuova).toMatchObject({ priorita: "alta", stato: "daFare", creataIl: "2026-11-23T10:00:00.000Z" });
+    expect(bloccanti(promosso, taskId).map((t) => t.titolo)).toEqual(["Deumidificatore"]);
+    expect(bloccata(promosso, taskId)).toBe(true);
+    // La task di partenza tiene la priorità scelta: la nuova, già alta, non la alza.
+    expect(prioritaEffettive(promosso).get(taskId)!.motivi).toEqual([]);
+    expect(testDi(promosso, taskId, igrometro).pianoB).toMatchObject({ tipo: "azione", testo: "Deumidificatore", taskId: nuova.id });
+  });
+
+  it("non crea una seconda task da un piano B già promosso, neanche dopo averlo rinominato", () => {
+    const { progetto, taskId, igrometro } = conAzioneFallita();
+    const promosso = ok(creaTaskDaPianoB(progetto, taskId, igrometro, ora));
+
+    expect(creaTaskDaPianoB(promosso, taskId, igrometro, ora).tipo).toBe("rifiutato");
+    const rinominato = ok(impostaPianoB(promosso, taskId, igrometro, { tipo: "azione", testo: "Deumidificatore grande" }));
+    expect(creaTaskDaPianoB(rinominato, taskId, igrometro, ora).tipo).toBe("rifiutato");
+  });
+
+  it("si crea solo dal piano B azione di un test fallito", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+    const conAzione = ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "azione", testo: "Deumidificatore" }));
+    const conTest = ok(
+      impostaEsito(ok(impostaPianoB(conAzione, taskId, spugna, { tipo: "test", testId: igrometro })), taskId, spugna, "fallito"),
+    );
+
+    // Azione di un test da provare, poi passato; piano B di tipo test.
+    expect(creaTaskDaPianoB(conTest, taskId, igrometro, ora).tipo).toBe("rifiutato");
+    expect(creaTaskDaPianoB(ok(impostaEsito(conTest, taskId, igrometro, "passato")), taskId, igrometro, ora).tipo).toBe("rifiutato");
+    expect(creaTaskDaPianoB(conTest, taskId, spugna, ora).tipo).toBe("rifiutato");
+  });
+
+  it("eliminando la task creata il piano B torna promuovibile", () => {
+    const { progetto, taskId, igrometro } = conAzioneFallita();
+    const promosso = ok(creaTaskDaPianoB(progetto, taskId, igrometro, ora));
+    const nuova = promosso.task.find((t) => t.titolo === "Deumidificatore")!;
+
+    const senza = ok(eliminaTask(promosso, nuova.id));
+    expect(testDi(senza, taskId, igrometro).pianoB).toEqual(testDi(progetto, taskId, igrometro).pianoB);
+    expect(creaTaskDaPianoB(senza, taskId, igrometro, ora).tipo).toBe("ok");
+  });
+
+  it("non crea la task se la task di partenza è fatta", () => {
+    const { progetto, taskId, igrometro } = conAzioneFallita();
+    const fatta = conStato(progetto, "fatta", "Imbiancare");
+
+    expect(creaTaskDaPianoB(fatta, taskId, igrometro, ora).tipo).toBe("rifiutato");
   });
 });

@@ -31,8 +31,8 @@ export const ESITI = ["daProvare", "passato", "fallito"] as const;
 export type EsitoTest = (typeof ESITI)[number];
 
 // Piano B di tipo test: un altro test dello stesso rischio, che nel grafo è già un nodo.
-// Di tipo azione: un testo, con un nodo suo nella catena.
-export type PianoB = { tipo: "test"; testId: string } | { tipo: "azione"; testo: string; posizione: Posizione };
+// Di tipo azione: un testo, con un nodo suo nella catena. «taskId» è la task nata con «Crea task»: al più una.
+export type PianoB = { tipo: "test"; testId: string } | { tipo: "azione"; testo: string; posizione: Posizione; taskId?: string };
 
 export type Test = { id: string; titolo: string; esito: EsitoTest; posizione: Posizione; pianoB?: PianoB };
 export type Rischio = { id: string; titolo: string; descrizione: string; posizione: Posizione; test: Test[] };
@@ -181,9 +181,10 @@ export function modificaTask(progetto: Progetto, taskId: string, modifiche: Part
 
 export function eliminaTask(progetto: Progetto, taskId: string): Esito {
   if (!progetto.task.some((t) => t.id === taskId)) return rifiutato("La task non esiste più.");
-  // Con la task spariscono anche le sue dipendenze, in entrambe le direzioni.
+  // Con la task spariscono anche le sue dipendenze, in entrambe le direzioni, e il collegamento dal piano B da cui era nata.
   const dipendenze = progetto.dipendenze.filter((d) => d.bloccanteId !== taskId && d.dipendenteId !== taskId);
-  return { tipo: "ok", progetto: { ...progetto, task: progetto.task.filter((t) => t.id !== taskId), dipendenze } };
+  const task = progetto.task.filter((t) => t.id !== taskId).map((t) => scollegaDaPianiB(t, taskId));
+  return { tipo: "ok", progetto: { ...progetto, task, dipendenze } };
 }
 
 // La posizione è disposizione, non contenuto: si cambia anche su una task fatta.
@@ -590,8 +591,9 @@ export function impostaPianoB(
       }
       const testo = piano.testo.trim();
       if (!testo) return "Il testo dell'azione non può essere vuoto.";
-      const posizione = test.pianoB?.tipo === "azione" ? test.pianoB.posizione : postoLiberoCatena(rischi, "azione", test.posizione.y);
-      return { ...test, pianoB: { tipo: "azione", testo, posizione } };
+      // Rinominare l'azione non toglie né il suo posto né la task nata da lei.
+      if (test.pianoB?.tipo === "azione") return { ...test, pianoB: { ...test.pianoB, testo } };
+      return { ...test, pianoB: { tipo: "azione", testo, posizione: postoLiberoCatena(rischi, "azione", test.posizione.y) } };
     }),
   );
 }
@@ -645,4 +647,61 @@ export function pianiBDaEseguire(task: Task): { testId: string; bersaglio: RifNo
       return [{ testId: t.id, bersaglio }];
     }),
   );
+}
+
+// Perché dal piano B del test non si può creare una task, o undefined se si può:
+// serve un piano B azione di un test fallito, non ancora promosso.
+export function motivoNonCreaTask(test: Test): string | undefined {
+  if (test.pianoB?.tipo !== "azione") return "Si crea una task solo da un piano B azione";
+  if (test.esito !== "fallito") return "Si crea una task solo dal piano B di un test fallito";
+  if (test.pianoB.taskId) return "Da questo piano B è già nata una task";
+  return undefined;
+}
+
+type PianoBAzione = Extract<PianoB, { tipo: "azione" }>;
+
+// «Crea task» sul piano B azione di un test fallito: una task alta col titolo dell'azione, che blocca la task
+// di partenza (il test fallito la ferma finché il piano B non è fatto), collegata al piano B.
+// Un piano B già promosso non crea una seconda task.
+export function creaTaskDaPianoB(progetto: Progetto, taskId: string, testId: string, ora: Date): Esito {
+  const partenza = progetto.task.find((t) => t.id === taskId);
+  if (!partenza) return rifiutato("La task non esiste più.");
+  const test = partenza.rischi.flatMap((r) => r.test).find((t) => t.id === testId);
+  if (!test) return rifiutato("Il test non esiste più.");
+  const motivo = motivoNonCreaTask(test);
+  if (motivo) return rifiutato(`${motivo}.`);
+  // motivoNonCreaTask garantisce un piano B azione.
+  const piano = test.pianoB as PianoBAzione;
+
+  const creata = creaTask(progetto, { titolo: piano.testo }, ora);
+  if (creata.tipo !== "ok") return creata;
+  // creaTask aggiunge la task in fondo.
+  const nuovaId = creata.progetto.task.at(-1)!.id;
+  const alta = modificaTask(creata.progetto, nuovaId, { priorita: "alta" });
+  if (alta.tipo !== "ok") return alta;
+  // cambiaCatena rifiuta una task di partenza fatta: il progetto resta quello di prima.
+  const collegata = cambiaCatena(alta.progetto, taskId, (rischi) =>
+    cambiaTest(rischi, testId, (t) => ({ ...t, pianoB: { ...piano, taskId: nuovaId } })),
+  );
+  if (collegata.tipo !== "ok") return collegata;
+  // La task nuova non ha dipendenze: non può chiudere un cerchio. Una task di partenza in corso diventa bloccata
+  // senza conferma: il test fallito è proprio il motivo per fermarla.
+  return aggiungiDipendenza(collegata.progetto, nuovaId, taskId);
+}
+
+// Toglie dai piani B della task il collegamento alla task eliminata, così il piano B torna promuovibile.
+function scollegaDaPianiB(task: Task, eliminataId: string): Task {
+  const collegata = (t: Test): t is Test & { pianoB: PianoBAzione } => t.pianoB?.tipo === "azione" && t.pianoB.taskId === eliminataId;
+  if (!task.rischi.some((r) => r.test.some(collegata))) return task;
+  return {
+    ...task,
+    rischi: task.rischi.map((r) => ({
+      ...r,
+      test: r.test.map((t) => {
+        if (!collegata(t)) return t;
+        const { taskId: _, ...pianoB } = t.pianoB;
+        return { ...t, pianoB };
+      }),
+    })),
+  };
 }

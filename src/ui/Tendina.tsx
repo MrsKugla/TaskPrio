@@ -226,7 +226,7 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
       <ElencoTask titolo="Dipende da" vuoto="Non dipende da altre task." task={bloccanti(progetto, task.id)} effettive={effettive} onApri={onApri} />
 
       {/* Una task atomica non richiede test: non ha catena di verifica. */}
-      {!task.atomica && <CatenaVerifica progetto={progetto} task={task} applica={applica} solaLettura={fatta} />}
+      {!task.atomica && <CatenaVerifica progetto={progetto} task={task} applica={applica} solaLettura={fatta} onApri={onApri} />}
 
       <button className="pericolo elimina-task" onClick={() => setConfermaElimina(true)}>
         Elimina task

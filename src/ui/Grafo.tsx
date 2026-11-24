@@ -15,6 +15,7 @@ import {
   aggiungiDipendenza,
   bloccata,
   creaTask,
+  eliminaTask,
   rimuoviDipendenza,
   riordina,
   spostaTask,
@@ -24,7 +25,7 @@ import {
   type Progetto,
   type Task,
 } from "../regole";
-import { Avviso } from "./Dialoghi";
+import { Avviso, Conferma } from "./Dialoghi";
 import { NodoTask } from "./NodoTask";
 
 type Props = {
@@ -53,6 +54,8 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
   const [bozza, setBozza] = useState<Bozza | null>(null);
   const [titolo, setTitolo] = useState("");
   const [cerchio, setCerchio] = useState<Task[] | null>(null);
+  // Task da eliminare con Canc, in attesa del «Sei sicura?».
+  const [daEliminare, setDaEliminare] = useState<Task[] | null>(null);
   // Le frecce nascono dal progetto, quindi la selezione va tenuta a parte.
   const [frecceSelezionate, setFrecceSelezionate] = useState<ReadonlySet<string>>(new Set());
   // Durante il trascinamento la posizione vive solo qui: il progetto si aggiorna e si salva una volta, al rilascio.
@@ -72,8 +75,6 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         data: { task: t, effettiva: effettive.get(t.id)!, bloccata: bloccata(progetto, t.id) },
         selected: t.id === selezionataId,
         hidden: !visibili.has(t.id),
-        // Una task si elimina solo dalla tendina, con conferma: Canc vale solo per le frecce.
-        deletable: false,
       })),
     [progetto, effettive, selezionataId, trascinate, misure, visibili],
   );
@@ -195,7 +196,17 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         onConnect={({ source, target }) => collega(target, source)}
         // Canc sulle tastiere italiane è «Delete». Con una finestra di dialogo aperta non si elimina nulla.
         deleteKeyCode={["Delete", "Backspace"]}
-        onBeforeDelete={async () => !document.querySelector("dialog[open]")}
+        // La task aperta nella tendina resta selezionata anche cliccando una freccia: con frecce selezionate,
+        // Canc elimina solo quelle. Senza, Canc sulla task apre il «Sei sicura?» e ferma l'eliminazione immediata.
+        onBeforeDelete={async ({ nodes, edges }) => {
+          if (document.querySelector("dialog[open]")) return false;
+          const scelte = edges.filter((f) => frecceSelezionate.has(f.id));
+          if (scelte.length > 0) return { nodes: [], edges: scelte };
+          if (nodes.length === 0) return true;
+          const ids = new Set(nodes.map((n) => n.id));
+          setDaEliminare(progetto.task.filter((t) => ids.has(t.id)));
+          return false;
+        }}
         // Rotella del mouse, due dita o pizzico sul touchpad zoomano; trascinare lo sfondo sposta il grafo.
         // Lo zoom minimo predefinito (0,5) non basta a inquadrare un progetto con molte task.
         zoomOnDoubleClick={false}
@@ -216,6 +227,21 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
           </button>
         </Panel>
       </ReactFlow>
+      {daEliminare && (
+        <Conferma
+          messaggio={
+            daEliminare.length === 1
+              ? `Eliminare la task «${daEliminare[0].titolo}»?`
+              : `Eliminare ${daEliminare.length} task: ${daEliminare.map((t) => `«${t.titolo}»`).join(", ")}?`
+          }
+          etichettaConferma="Elimina"
+          onAnnulla={() => setDaEliminare(null)}
+          onConferma={() => {
+            applica(daEliminare.reduce<Esito>((e, t) => (e.tipo === "ok" ? eliminaTask(e.progetto, t.id) : e), { tipo: "ok", progetto }));
+            setDaEliminare(null);
+          }}
+        />
+      )}
       {cerchio && (
         <Avviso
           messaggio="Dipendenza rifiutata: chiuderebbe un cerchio tra queste task, dove ognuna blocca la successiva e l'ultima la prima."

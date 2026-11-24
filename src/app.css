@@ -631,6 +631,26 @@ button:disabled {
   background: #f3f0ff;
 }
 
+.catena-azione .crea-task,
+.catena-azione .task-creata {
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 18px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Collegamento alla task nata dal piano B: si apre con un clic. */
+.catena-azione .task-creata {
+  border: none;
+  background: none;
+  color: #5f3dc4;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Piano B da eseguire: il test che lo precede è fallito. */
 .nodo-catena.da-eseguire {
   outline: 3px solid #fab005;
