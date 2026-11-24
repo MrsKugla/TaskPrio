@@ -14,16 +14,16 @@ export function NodoTask({ id, data: { task, effettiva, bloccata }, selected }: 
   return (
     <div
       className={`nodo-task priorita-${effettiva.priorita} stato-${task.stato}${selected ? " selezionato" : ""}`}
-      title={`Priorità: ${priorita} · Stato: ${ETICHETTE_STATO[task.stato]}`}
+      title={`${task.titolo}\nPriorità: ${priorita} · Stato: ${ETICHETTE_STATO[task.stato]}`}
     >
       <Handle
         type="target"
-        position={Position.Left}
+        position={Position.Right}
         isConnectableStart={false}
         className={`arrivo-dipendenza${bersaglio ? " attivo" : ""}`}
       />
       <div className="nodo-titolo">
-        {task.titolo}
+        <span className="testo-titolo">{task.titolo}</span>
         <span className="simboli">
           {alzata && (
             <span className="simbolo-alzata" role="img" aria-label="Priorità alzata" title="Priorità alzata dalle regole">
@@ -48,7 +48,7 @@ export function NodoTask({ id, data: { task, effettiva, bloccata }, selected }: 
       </div>
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Left}
         isConnectableEnd={false}
         className="partenza-dipendenza"
         title="Trascina sulla task da cui questa dipende"

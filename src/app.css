@@ -24,6 +24,8 @@ input {
   border: 1px solid #c4c9d0;
   border-radius: 4px;
   background: #fff;
+  /* Fisso come lo sfondo: dentro il grafo, col tema scuro di Windows, il testo ereditato sarebbe bianco. */
+  color: #1f2933;
 }
 
 button:disabled {
@@ -233,6 +235,7 @@ button:disabled {
   background: var(--priorita);
 }
 
+/* Larghezza massima e titolo su due righe: devono stare in INGOMBRO_TASK (src/regole), che evita le sovrapposizioni. */
 .nodo-task {
   min-width: 140px;
   max-width: 220px;
@@ -265,6 +268,14 @@ button:disabled {
   gap: 6px;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+/* Oltre due righe il titolo si taglia: intero nel tooltip e nella tendina. */
+.testo-titolo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .simbolo-atomica {
@@ -357,7 +368,8 @@ button:disabled {
   font-weight: 600;
 }
 
-/* Pallino sul bordo destro: da qui si trascina una dipendenza verso un'altra task. */
+/* Pallino sul bordo sinistro, verso le task da cui si dipende (a sinistra dopo «Riordina»):
+   da qui si trascina una dipendenza verso un'altra task. */
 .nodo-task .partenza-dipendenza {
   width: 12px;
   height: 12px;

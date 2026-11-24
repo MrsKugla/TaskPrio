@@ -10,10 +10,12 @@ import {
   dipendenti,
   eliminaTask,
   modificaTask,
+  INGOMBRO_TASK,
   prioritaEffettive,
   rimuoviDipendenza,
   rinominaProgetto,
   riapri,
+  riordina,
   ripristinaProgetto,
   type Priorita,
   type Progetto,
@@ -591,5 +593,87 @@ describe("priorità effettiva: task bloccante", () => {
     expect(effettiva(conBFatta, "A").priorita).toBe("media");
 
     expect(effettiva(conStato(conBFatta, "fatta", "C"), "A")).toEqual({ priorita: "bassa", motivi: [] });
+  });
+});
+
+type Riquadro = { x: number; y: number };
+
+// Due task si sovrappongono se i loro ingombri si toccano in orizzontale e in verticale.
+const siSovrappongono = (a: Riquadro, b: Riquadro) =>
+  Math.abs(a.x - b.x) < INGOMBRO_TASK.larghezza && Math.abs(a.y - b.y) < INGOMBRO_TASK.altezza;
+
+function sovrapposte(progetto: Progetto): string[] {
+  const coppie: string[] = [];
+  progetto.task.forEach((a, i) =>
+    progetto.task.slice(i + 1).forEach((b) => {
+      if (siSovrappongono(a.posizione, b.posizione)) coppie.push(`${a.titolo} / ${b.titolo}`);
+    }),
+  );
+  return coppie;
+}
+
+const x = (progetto: Progetto, titolo: string) => progetto.task.find((t) => t.titolo === titolo)!.posizione.x;
+
+describe("«Riordina»", () => {
+  it("mette ogni task bloccante a sinistra delle task che blocca, anche a catena", () => {
+    const progetto = conDipendenze(progettoConTask("C", "B", "A", "D"), ["A", "B"], ["B", "C"], ["D", "C"]);
+
+    const riordinato = riordina(progetto);
+
+    expect(x(riordinato, "A")).toBeLessThan(x(riordinato, "B"));
+    expect(x(riordinato, "B")).toBeLessThan(x(riordinato, "C"));
+    expect(x(riordinato, "D")).toBeLessThan(x(riordinato, "C"));
+  });
+
+  it("nessuna task si sovrappone a un'altra", () => {
+    const base = progettoConTask("A", "B", "C", "D", "E", "F", "G");
+    const progetto = conDipendenze(base, ["A", "C"], ["B", "C"], ["C", "D"], ["A", "E"]);
+    // Tutte ammucchiate nello stesso punto prima di riordinare.
+    const ammucchiato = { ...progetto, task: progetto.task.map((t) => ({ ...t, posizione: { x: 0, y: 0 } })) };
+
+    expect(sovrapposte(riordina(ammucchiato))).toEqual([]);
+  });
+
+  it("dà la stessa disposizione qualunque fossero le posizioni di prima", () => {
+    const progetto = conDipendenze(progettoConTask("A", "B", "C", "D"), ["A", "B"], ["A", "C"]);
+    const spostato = { ...progetto, task: progetto.task.map((t, i) => ({ ...t, posizione: { x: 500 - i * 70, y: i * 33 } })) };
+
+    const posizioni = (p: Progetto) => p.task.map((t) => t.posizione);
+    expect(posizioni(riordina(spostato))).toEqual(posizioni(riordina(progetto)));
+  });
+
+  it("non tocca nient'altro che le posizioni", () => {
+    const progetto = conDipendenze(progettoConTask("A", "B"), ["A", "B"]);
+
+    const riordinato = riordina(progetto);
+
+    const senzaPosizioni = (p: Progetto) => ({ ...p, task: p.task.map(({ posizione: _, ...resto }) => resto) });
+    expect(senzaPosizioni(riordinato)).toEqual(senzaPosizioni(progetto));
+  });
+});
+
+describe("task nuova senza posizione", () => {
+  it("si piazza senza sovrapporsi alle task esistenti", () => {
+    const base = progettoConTask("A", "B", "C");
+    // Task sparse, due quasi sovrapposte, una sotto a destra.
+    const posizioni = [{ x: 0, y: 0 }, { x: 40, y: 30 }, { x: 600, y: 400 }];
+    const progetto = { ...base, task: base.task.map((t, i) => ({ ...t, posizione: posizioni[i] })) };
+
+    const esito = creaTask(progetto, { titolo: "Nuova" }, ora);
+
+    if (esito.tipo !== "ok") throw new Error("task non creata");
+    const nuova = esito.progetto.task.find((t) => t.titolo === "Nuova")!;
+    expect(Number.isFinite(nuova.posizione.x) && Number.isFinite(nuova.posizione.y)).toBe(true);
+    expect(sovrapposte(esito.progetto)).toEqual(["A / B"]);
+  });
+
+  it("in un progetto vuoto nasce nell'origine", () => {
+    const creato = creaProgetto("Casa", ora);
+    if (creato.tipo !== "ok") throw new Error("progetto non creato");
+
+    const esito = creaTask(creato.progetto, { titolo: "Prima" }, ora);
+
+    if (esito.tipo !== "ok") throw new Error("task non creata");
+    expect(esito.progetto.task[0].posizione).toEqual({ x: 0, y: 0 });
   });
 });

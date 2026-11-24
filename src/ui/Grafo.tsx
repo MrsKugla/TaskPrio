@@ -1,19 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
   MarkerType,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
   type Edge,
   type OnEdgesChange,
+  type OnNodesChange,
 } from "@xyflow/react";
 import {
   aggiungiDipendenza,
   bloccata,
   creaTask,
   rimuoviDipendenza,
+  riordina,
+  spostaTask,
   type Esito,
   type Posizione,
   type PrioritaEffettiva,
@@ -38,28 +42,43 @@ const idFreccia = (bloccanteId: string, dipendenteId: string) => `${bloccanteId}
 
 // Task in attesa di titolo: posizione nel grafo e punto dello schermo dove mostrare il campo.
 type Bozza = { posizione: Posizione; schermo: { x: number; y: number } };
+type Misura = { width: number; height: number };
 
 function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona }: Props) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
   const [bozza, setBozza] = useState<Bozza | null>(null);
   const [titolo, setTitolo] = useState("");
   const [cerchio, setCerchio] = useState<Task[] | null>(null);
   // Le frecce nascono dal progetto, quindi la selezione va tenuta a parte.
   const [frecceSelezionate, setFrecceSelezionate] = useState<ReadonlySet<string>>(new Set());
+  // Durante il trascinamento la posizione vive solo qui: il progetto si aggiorna e si salva una volta, al rilascio.
+  const [trascinate, setTrascinate] = useState<ReadonlyMap<string, Posizione>>(new Map());
+  // Misure dei nodi rilevate da React Flow: ripassate nei nodi, così ricostruirli non le azzera e le frecce restano agganciate.
+  const [misure, setMisure] = useState<ReadonlyMap<string, Misura>>(new Map());
+  const [daAdattare, setDaAdattare] = useState(false);
 
   const nodi = useMemo<NodoTask[]>(
     () =>
       progetto.task.map((t) => ({
         id: t.id,
         type: "task",
-        position: t.posizione,
+        position: trascinate.get(t.id) ?? t.posizione,
+        measured: misure.get(t.id),
+        dragging: trascinate.has(t.id),
         data: { task: t, effettiva: effettive.get(t.id)!, bloccata: bloccata(progetto, t.id) },
         selected: t.id === selezionataId,
         // Una task si elimina solo dalla tendina, con conferma: Canc vale solo per le frecce.
         deletable: false,
       })),
-    [progetto, effettive, selezionataId],
+    [progetto, effettive, selezionataId, trascinate, misure],
   );
+
+  // Dopo «Riordina» si inquadra il grafo, quando React Flow ha già le posizioni nuove.
+  useEffect(() => {
+    if (!daAdattare) return;
+    setDaAdattare(false);
+    fitView({ duration: 300 });
+  }, [daAdattare, fitView]);
 
   const frecce = useMemo<Edge[]>(
     () =>
@@ -75,6 +94,38 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
       }),
     [progetto.dipendenze, frecceSelezionate],
   );
+
+  const suCambioNodi: OnNodesChange<NodoTask> = (cambi) => {
+    const dimensioni = cambi.getByType("dimensions").filter((c) => c.dimensions);
+    if (dimensioni.length > 0) {
+      setMisure((attuali) => {
+        const aggiornate = new Map(attuali);
+        for (const c of dimensioni) aggiornate.set(c.id, c.dimensions!);
+        return aggiornate;
+      });
+    }
+
+    const spostamenti = cambi.getByType("position").filter((c) => c.position);
+    if (spostamenti.length === 0) return;
+    // Rilascio del trascinamento o spostamento con le frecce della tastiera: si salva.
+    const finiti = spostamenti.filter((c) => !c.dragging);
+    if (finiti.length > 0) {
+      applica(
+        finiti.reduce<Esito>(
+          (e, c) => (e.tipo === "ok" ? spostaTask(e.progetto, c.id, c.position!) : e),
+          { tipo: "ok", progetto },
+        ),
+      );
+    }
+    setTrascinate((attuali) => {
+      const aggiornate = new Map(attuali);
+      for (const c of spostamenti) {
+        if (c.dragging) aggiornate.set(c.id, c.position!);
+        else aggiornate.delete(c.id);
+      }
+      return aggiornate;
+    });
+  };
 
   const suCambioFrecce: OnEdgesChange = (cambi) => {
     const selezioni = cambi.getByType("select");
@@ -126,18 +177,32 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         edges={frecce}
         nodeTypes={tipiNodo}
         onNodeClick={(_, nodo) => onSeleziona(nodo.id)}
+        onNodesChange={suCambioNodi}
         onEdgesChange={suCambioFrecce}
         onEdgesDelete={suEliminaFrecce}
         onConnect={({ source, target }) => collega(target, source)}
         // Canc sulle tastiere italiane è «Delete». Con una finestra di dialogo aperta non si elimina nulla.
         deleteKeyCode={["Delete", "Backspace"]}
         onBeforeDelete={async () => !document.querySelector("dialog[open]")}
+        // Rotella del mouse, due dita o pizzico sul touchpad zoomano; trascinare lo sfondo sposta il grafo.
+        // Lo zoom minimo predefinito (0,5) non basta a inquadrare un progetto con molte task.
         zoomOnDoubleClick={false}
-        nodesDraggable={false}
+        minZoom={0.1}
         fitView
       >
         <Background />
         <Controls showInteractive={false} />
+        <Panel position="top-right">
+          <button
+            disabled={progetto.task.length === 0}
+            title="Ricalcola da capo la disposizione: ogni task a destra delle task da cui dipende"
+            onClick={() => {
+              if (applica({ tipo: "ok", progetto: riordina(progetto) })) setDaAdattare(true);
+            }}
+          >
+            Riordina
+          </button>
+        </Panel>
       </ReactFlow>
       {cerchio && (
         <Avviso

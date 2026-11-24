@@ -90,14 +90,39 @@ export function ripristinaProgetto(salvato: Progetto): Progetto {
   };
 }
 
-export function creaTask(progetto: Progetto, dati: { titolo: string; posizione: Posizione }, ora: Date): Esito {
+// Spazio che una task occupa nel grafo: lo stile del nodo (app.css, .nodo-task) lo tiene entro 220px e due righe di titolo.
+export const INGOMBRO_TASK = { larghezza: 220, altezza: 90 } as const;
+const PASSO_COLONNE = INGOMBRO_TASK.larghezza + 80;
+const PASSO_RIGHE = INGOMBRO_TASK.altezza + 30;
+
+const siSovrappongono = (a: Posizione, b: Posizione) =>
+  Math.abs(a.x - b.x) < INGOMBRO_TASK.larghezza && Math.abs(a.y - b.y) < INGOMBRO_TASK.altezza;
+
+// Primo posto libero su una griglia con i passi di «Riordina», riga per riga dall'angolo in alto a sinistra delle task:
+// riempie i buchi prima di allungare il grafo. Sotto l'ultima task c'è sempre posto, quindi la ricerca finisce.
+function postoLibero(task: Task[]): Posizione {
+  if (task.length === 0) return { x: 0, y: 0 };
+  const xs = task.map((t) => t.posizione.x);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...task.map((t) => t.posizione.y));
+  for (let r = 0; ; r++) {
+    for (let x = minX; x <= maxX; x += PASSO_COLONNE) {
+      const posto = { x, y: minY + r * PASSO_RIGHE };
+      if (!task.some((t) => siSovrappongono(t.posizione, posto))) return posto;
+    }
+  }
+}
+
+// Senza posizione (task non creata col doppio clic) la task va nel primo posto libero.
+export function creaTask(progetto: Progetto, dati: { titolo: string; posizione?: Posizione }, ora: Date): Esito {
   const titolo = dati.titolo.trim();
   if (!titolo) return rifiutato("Il titolo della task non può essere vuoto.");
   const task: Task = {
     id: crypto.randomUUID(),
     titolo,
     ...VALORI_INIZIALI,
-    posizione: { ...dati.posizione },
+    posizione: { ...(dati.posizione ?? postoLibero(progetto.task)) },
     creataIl: ora.toISOString(),
   };
   return { tipo: "ok", progetto: { ...progetto, task: [...progetto.task, task] } };
@@ -131,6 +156,15 @@ export function eliminaTask(progetto: Progetto, taskId: string): Esito {
   // Con la task spariscono anche le sue dipendenze, in entrambe le direzioni.
   const dipendenze = progetto.dipendenze.filter((d) => d.bloccanteId !== taskId && d.dipendenteId !== taskId);
   return { tipo: "ok", progetto: { ...progetto, task: progetto.task.filter((t) => t.id !== taskId), dipendenze } };
+}
+
+// La posizione è disposizione, non contenuto: si cambia anche su una task fatta.
+export function spostaTask(progetto: Progetto, taskId: string, posizione: Posizione): Esito {
+  if (!progetto.task.some((t) => t.id === taskId)) return rifiutato("La task non esiste più.");
+  return {
+    tipo: "ok",
+    progetto: { ...progetto, task: progetto.task.map((t) => (t.id === taskId ? { ...t, posizione: { ...posizione } } : t)) },
+  };
 }
 
 // Task da cui dipende la task indicata, nell'ordine del progetto.
@@ -301,4 +335,40 @@ export function prioritaEffettive(progetto: Progetto): Map<string, PrioritaEffet
 
   for (const t of progetto.task) calcola(t);
   return risultato;
+}
+
+// «Riordina»: dispone le task in colonne, ogni bloccante a sinistra delle task che blocca.
+// La colonna di una task è la catena più lunga di bloccanti prima di lei; dentro la colonna le task stanno
+// vicino alla media delle righe delle loro bloccanti, così le frecce si incrociano poco.
+// Dipende solo da task e dipendenze, non dalle posizioni di prima: riordinare due volte dà lo stesso risultato.
+export function riordina(progetto: Progetto): Progetto {
+  const colonna = new Map<string, number>();
+  const colonnaDi = (taskId: string): number => {
+    const nota = colonna.get(taskId);
+    if (nota !== undefined) return nota;
+    const calcolata = Math.max(-1, ...bloccanti(progetto, taskId).map((b) => colonnaDi(b.id))) + 1;
+    colonna.set(taskId, calcolata);
+    return calcolata;
+  };
+  const colonne: Task[][] = [];
+  for (const t of progetto.task) (colonne[colonnaDi(t.id)] ??= []).push(t);
+
+  const posizione = new Map<string, Posizione>();
+  colonne.forEach((task, c) => {
+    // Le bloccanti stanno nelle colonne precedenti, quindi hanno già la posizione.
+    const media = new Map(
+      task.map((t) => {
+        const altezze = bloccanti(progetto, t.id).map((b) => posizione.get(b.id)!.y);
+        return [t.id, altezze.length ? altezze.reduce((a, b) => a + b, 0) / altezze.length : 0];
+      }),
+    );
+    // sort è stabile: a parità di media resta l'ordine del progetto.
+    const ordinate = [...task].sort((a, b) => media.get(a.id)! - media.get(b.id)!);
+    ordinate.forEach((t, r) => {
+      // Colonne centrate in verticale sulla stessa linea.
+      posizione.set(t.id, { x: c * PASSO_COLONNE, y: (r - (ordinate.length - 1) / 2) * PASSO_RIGHE });
+    });
+  });
+
+  return { ...progetto, task: progetto.task.map((t) => ({ ...t, posizione: posizione.get(t.id)! })) };
 }
