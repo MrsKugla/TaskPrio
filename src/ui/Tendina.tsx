@@ -9,7 +9,7 @@ import {
   dipendenti,
   eliminaTask,
   modificaTask,
-  puoEssereAtomica,
+  motivoNonAtomica,
   riapri,
   type AttributiTask,
   type Esito,
@@ -21,6 +21,7 @@ import {
   type Task,
 } from "../regole";
 import { ETICHETTE_FOCUS, ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, IconaFocus, Pallini } from "./aspetto";
+import { CatenaVerifica } from "./CatenaVerifica";
 import { Conferma } from "./Dialoghi";
 
 type Props = {
@@ -107,6 +108,7 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
 
   const fatta = task.stato === "fatta";
   const effettiva = effettive.get(task.id)!;
+  const nonAtomica = motivoNonAtomica(task);
 
   return (
     <aside className="tendina" aria-label="Dettagli della task">
@@ -203,11 +205,11 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
           ))}
         </fieldset>
 
-        <label className="scelta" title={puoEssereAtomica(task.costoTempo) ? undefined : "Una task oltre le 4h non può essere atomica"}>
+        <label className="scelta" title={nonAtomica}>
           <input
             type="checkbox"
             checked={task.atomica}
-            disabled={!puoEssereAtomica(task.costoTempo)}
+            disabled={nonAtomica !== undefined}
             onChange={(e) => modifica({ atomica: e.target.checked })}
           />
           Atomica
@@ -222,6 +224,9 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
 
       <ElencoTask titolo="Blocca" vuoto="Nessuna task dipende da questa." task={dipendenti(progetto, task.id)} effettive={effettive} onApri={onApri} />
       <ElencoTask titolo="Dipende da" vuoto="Non dipende da altre task." task={bloccanti(progetto, task.id)} effettive={effettive} onApri={onApri} />
+
+      {/* Una task atomica non richiede test: non ha catena di verifica. */}
+      {!task.atomica && <CatenaVerifica progetto={progetto} task={task} applica={applica} solaLettura={fatta} />}
 
       <button className="pericolo elimina-task" onClick={() => setConfermaElimina(true)}>
         Elimina task

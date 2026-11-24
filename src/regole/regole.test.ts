@@ -20,7 +20,20 @@ import {
   taskInFocus,
   taskVisibili,
   ripristinaProgetto,
+  aggiungiRischio,
+  aggiungiTest,
+  eliminaRischio,
+  eliminaTest,
+  haRischiAperti,
+  impostaEsito,
+  impostaPianoB,
+  modificaRischio,
+  modificaTest,
+  pianiBDaEseguire,
+  rimuoviPianoB,
+  spostaNodoCatena,
   type AttributiTask,
+  type Esito,
   type Filtri,
   type Priorita,
   type Progetto,
@@ -121,6 +134,7 @@ describe("attributi della task", () => {
       posizione: { x: 0, y: 0 },
       creataIl: "2026-11-23T10:00:00.000Z",
       stato: "daFare",
+      rischi: [],
     });
     expect(esito.progetto.task[1]).toEqual(pulire);
   });
@@ -162,6 +176,7 @@ describe("attributi della task", () => {
       costoTempo: "da1a4h",
       atomica: false,
       stato: "daFare",
+      rischi: [],
     });
   });
 
@@ -754,5 +769,243 @@ describe("focus su una task", () => {
     const progetto = conStato(conDipendenze(progettoConTask("A", "B"), ["A", "B"]), "fatta", "A");
 
     expect(titoli(taskInFocus(progetto, id(progetto, "B")))).toEqual(["A", "B"]);
+  });
+});
+
+// Catena di verifica della task «Imbiancare» di progettoConDueTask: rischio «Muffa» con i test «Igrometro» e «Spugna».
+function conCatena(): { progetto: Progetto; taskId: string; rischioId: string; igrometro: string; spugna: string } {
+  const base = progettoConDueTask();
+  const taskId = base.task[0].id;
+  const rischio = aggiungiRischio(base, taskId, { titolo: "Muffa", descrizione: "Pareti umide" });
+  if (rischio.tipo !== "ok") throw new Error("rischio non aggiunto");
+  const rischioId = rischiDi(rischio.progetto, taskId)[0].id;
+  const primo = aggiungiTest(rischio.progetto, taskId, rischioId, { titolo: "Igrometro" });
+  if (primo.tipo !== "ok") throw new Error("test non aggiunto");
+  const secondo = aggiungiTest(primo.progetto, taskId, rischioId, { titolo: "Spugna" });
+  if (secondo.tipo !== "ok") throw new Error("test non aggiunto");
+  const [igrometro, spugna] = rischiDi(secondo.progetto, taskId)[0].test.map((t) => t.id);
+  return { progetto: secondo.progetto, taskId, rischioId, igrometro, spugna };
+}
+
+const rischiDi = (progetto: Progetto, taskId: string) => progetto.task.find((t) => t.id === taskId)!.rischi;
+const testDi = (progetto: Progetto, taskId: string, testId: string) =>
+  rischiDi(progetto, taskId)
+    .flatMap((r) => r.test)
+    .find((t) => t.id === testId)!;
+
+function ok(esito: Esito): Progetto {
+  if (esito.tipo !== "ok") throw new Error(`rifiutato: ${esito.motivo}`);
+  return esito.progetto;
+}
+
+describe("catena di verifica: struttura", () => {
+  it("una task nuova non ha rischi", () => {
+    expect(progettoConDueTask().task[0].rischi).toEqual([]);
+  });
+
+  it("aggiunge un rischio con titolo e descrizione e più test, tutti da provare e senza piano B", () => {
+    const { progetto, taskId } = conCatena();
+
+    const [rischio] = rischiDi(progetto, taskId);
+    expect(rischio).toMatchObject({ titolo: "Muffa", descrizione: "Pareti umide" });
+    expect(rischio.test.map((t) => [t.titolo, t.esito, t.pianoB])).toEqual([
+      ["Igrometro", "daProvare", undefined],
+      ["Spugna", "daProvare", undefined],
+    ]);
+    // Le altre task non hanno la catena.
+    expect(progetto.task[1].rischi).toEqual([]);
+  });
+
+  it("rifiuta rischi e test senza titolo", () => {
+    const { progetto, taskId, rischioId } = conCatena();
+
+    expect(aggiungiRischio(progetto, taskId, { titolo: "  " }).tipo).toBe("rifiutato");
+    expect(aggiungiTest(progetto, taskId, rischioId, { titolo: "" }).tipo).toBe("rifiutato");
+  });
+
+  it("modifica il titolo e la descrizione di un rischio e il titolo di un test", () => {
+    const { progetto, taskId, rischioId, igrometro } = conCatena();
+
+    const modificato = ok(
+      modificaTest(ok(modificaRischio(progetto, taskId, rischioId, { titolo: " Condensa ", descrizione: "" })), taskId, igrometro, {
+        titolo: "Igrometro digitale",
+      }),
+    );
+
+    expect(rischiDi(modificato, taskId)[0]).toMatchObject({ titolo: "Condensa", descrizione: "" });
+    expect(testDi(modificato, taskId, igrometro).titolo).toBe("Igrometro digitale");
+  });
+
+  it("eliminando un rischio spariscono anche i suoi test", () => {
+    const { progetto, taskId, rischioId } = conCatena();
+
+    expect(rischiDi(ok(eliminaRischio(progetto, taskId, rischioId)), taskId)).toEqual([]);
+  });
+
+  it("i nodi nuovi della catena non si sovrappongono", () => {
+    const { progetto, taskId } = conCatena();
+    const secondoRischio = ok(aggiungiRischio(progetto, taskId, { titolo: "Colore sbagliato" }));
+    const conTest = ok(aggiungiTest(secondoRischio, taskId, rischiDi(secondoRischio, taskId)[1].id, { titolo: "Campione" }));
+    const conAzione = ok(
+      impostaPianoB(conTest, taskId, rischiDi(conTest, taskId)[0].test[1].id, { tipo: "azione", testo: "Deumidificatore" }),
+    );
+
+    const posizioni = rischiDi(conAzione, taskId).flatMap((r) => [
+      r.posizione,
+      ...r.test.flatMap((t) => [t.posizione, ...(t.pianoB?.tipo === "azione" ? [t.pianoB.posizione] : [])]),
+    ]);
+    const chiavi = posizioni.map((p) => `${p.x},${p.y}`);
+    expect(new Set(chiavi).size).toBe(chiavi.length);
+  });
+
+  it("sposta i nodi della catena, anche su una task fatta", () => {
+    const { progetto, taskId, rischioId, igrometro } = conCatena();
+    const fatta = conStato(progetto, "fatta", "Imbiancare");
+
+    const spostato = ok(spostaNodoCatena(fatta, taskId, { tipo: "test", id: igrometro }, { x: 7, y: 8 }));
+    expect(testDi(spostato, taskId, igrometro).posizione).toEqual({ x: 7, y: 8 });
+    const rischio = ok(spostaNodoCatena(spostato, taskId, { tipo: "rischio", id: rischioId }, { x: -3, y: 4 }));
+    expect(rischiDi(rischio, taskId)[0].posizione).toEqual({ x: -3, y: 4 });
+  });
+
+  it("una task fatta ha la catena in sola lettura", () => {
+    const { progetto, taskId, igrometro } = conCatena();
+    const fatta = conStato(progetto, "fatta", "Imbiancare");
+
+    expect(aggiungiRischio(fatta, taskId, { titolo: "Altro" }).tipo).toBe("rifiutato");
+    expect(impostaEsito(fatta, taskId, igrometro, "passato").tipo).toBe("rifiutato");
+  });
+
+  it("completa con una catena vuota le task salvate prima dei rischi", () => {
+    const salvato = {
+      id: "p1",
+      nome: "Casa",
+      creatoIl: "2026-11-01T10:00:00.000Z",
+      task: [{ id: "t1", titolo: "Vecchia", posizione: { x: 5, y: 6 }, creataIl: "2026-11-01T10:00:00.000Z" }],
+      dipendenze: [],
+    };
+
+    expect(ripristinaProgetto(salvato as unknown as Progetto).task[0].rischi).toEqual([]);
+  });
+});
+
+describe("catena di verifica: task atomica", () => {
+  it("una task atomica non accetta rischi", () => {
+    const progetto = progettoConDueTask();
+    const atomica = ok(modificaTask(progetto, progetto.task[0].id, { atomica: true }));
+
+    expect(aggiungiRischio(atomica, progetto.task[0].id, { titolo: "Muffa" }).tipo).toBe("rifiutato");
+  });
+
+  it("una task con rischi non diventa atomica e li conserva", () => {
+    const { progetto, taskId } = conCatena();
+
+    expect(modificaTask(progetto, taskId, { atomica: true }).tipo).toBe("rifiutato");
+    // Il resto della modifica passa: la catena resta e la task non è atomica.
+    const altro = ok(modificaTask(progetto, taskId, { costoTempo: "meno1h" }));
+    expect(altro.task[0]).toMatchObject({ atomica: false, costoTempo: "meno1h" });
+    expect(rischiDi(altro, taskId)).toHaveLength(1);
+  });
+});
+
+describe("catena di verifica: esiti", () => {
+  it("segna un test passato o fallito e lo riporta da provare", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+
+    const passato = ok(impostaEsito(progetto, taskId, igrometro, "passato"));
+    const fallito = ok(impostaEsito(passato, taskId, spugna, "fallito"));
+    expect(testDi(fallito, taskId, igrometro).esito).toBe("passato");
+    expect(testDi(fallito, taskId, spugna).esito).toBe("fallito");
+    expect(testDi(ok(impostaEsito(fallito, taskId, spugna, "daProvare")), taskId, spugna).esito).toBe("daProvare");
+  });
+
+  it("la task ha rischi aperti finché un suo rischio ha test non passati o nessun test", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+    const task = (p: Progetto) => p.task.find((t) => t.id === taskId)!;
+
+    expect(haRischiAperti(task(progetto))).toBe(true);
+    const unoPassato = ok(impostaEsito(progetto, taskId, igrometro, "passato"));
+    expect(haRischiAperti(task(unoPassato))).toBe(true);
+    const tuttiPassati = ok(impostaEsito(unoPassato, taskId, spugna, "passato"));
+    expect(haRischiAperti(task(tuttiPassati))).toBe(false);
+    // Un rischio senza test non è verificato.
+    expect(haRischiAperti(task(ok(aggiungiRischio(tuttiPassati, taskId, { titolo: "Colore" }))))).toBe(true);
+    expect(haRischiAperti(progettoConDueTask().task[0])).toBe(false);
+  });
+
+  it("il piano B di un test fallito è da eseguire, quello di un test passato o da provare no", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+    const conPiani = ok(
+      impostaPianoB(ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "test", testId: spugna })), taskId, spugna, {
+        tipo: "azione",
+        testo: "Deumidificatore",
+      }),
+    );
+    const task = (p: Progetto) => p.task.find((t) => t.id === taskId)!;
+
+    expect(pianiBDaEseguire(task(conPiani))).toEqual([]);
+    const fallito = ok(impostaEsito(conPiani, taskId, igrometro, "fallito"));
+    expect(pianiBDaEseguire(task(fallito))).toEqual([{ testId: igrometro, bersaglio: { tipo: "test", id: spugna } }]);
+    const entrambi = ok(impostaEsito(fallito, taskId, spugna, "fallito"));
+    expect(pianiBDaEseguire(task(entrambi))).toEqual([
+      { testId: igrometro, bersaglio: { tipo: "test", id: spugna } },
+      { testId: spugna, bersaglio: { tipo: "azione", id: spugna } },
+    ]);
+    expect(pianiBDaEseguire(task(ok(impostaEsito(entrambi, taskId, igrometro, "passato"))))).toEqual([
+      { testId: spugna, bersaglio: { tipo: "azione", id: spugna } },
+    ]);
+  });
+});
+
+describe("catena di verifica: piano B", () => {
+  it("il piano B di tipo test punta a un altro test dello stesso rischio", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+
+    const conPiano = ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "test", testId: spugna }));
+    expect(testDi(conPiano, taskId, igrometro).pianoB).toEqual({ tipo: "test", testId: spugna });
+  });
+
+  it("rifiuta un piano B di tipo test verso un test di un altro rischio, verso sé stesso o inesistente", () => {
+    const { progetto, taskId, igrometro } = conCatena();
+    const altroRischio = ok(aggiungiRischio(progetto, taskId, { titolo: "Colore" }));
+    const conAltroTest = ok(aggiungiTest(altroRischio, taskId, rischiDi(altroRischio, taskId)[1].id, { titolo: "Campione" }));
+    const campione = rischiDi(conAltroTest, taskId)[1].test[0].id;
+
+    expect(impostaPianoB(conAltroTest, taskId, igrometro, { tipo: "test", testId: campione }).tipo).toBe("rifiutato");
+    expect(impostaPianoB(conAltroTest, taskId, igrometro, { tipo: "test", testId: igrometro }).tipo).toBe("rifiutato");
+    expect(impostaPianoB(conAltroTest, taskId, igrometro, { tipo: "test", testId: "inesistente" }).tipo).toBe("rifiutato");
+  });
+
+  it("il piano B di tipo azione è un testo non vuoto e cambiandolo resta dov'era", () => {
+    const { progetto, taskId, igrometro } = conCatena();
+
+    expect(impostaPianoB(progetto, taskId, igrometro, { tipo: "azione", testo: "  " }).tipo).toBe("rifiutato");
+    const conAzione = ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "azione", testo: " Deumidificatore " }));
+    const spostata = ok(spostaNodoCatena(conAzione, taskId, { tipo: "azione", id: igrometro }, { x: 50, y: 60 }));
+    const rinominata = ok(impostaPianoB(spostata, taskId, igrometro, { tipo: "azione", testo: "Pittura antimuffa" }));
+
+    expect(testDi(rinominata, taskId, igrometro).pianoB).toEqual({
+      tipo: "azione",
+      testo: "Pittura antimuffa",
+      posizione: { x: 50, y: 60 },
+    });
+  });
+
+  it("ogni test ha un solo piano B: il nuovo sostituisce il vecchio, e si può togliere", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+    const conAzione = ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "azione", testo: "Deumidificatore" }));
+
+    const conTest = ok(impostaPianoB(conAzione, taskId, igrometro, { tipo: "test", testId: spugna }));
+    expect(testDi(conTest, taskId, igrometro).pianoB).toEqual({ tipo: "test", testId: spugna });
+    expect(testDi(ok(rimuoviPianoB(conTest, taskId, igrometro)), taskId, igrometro).pianoB).toBeUndefined();
+  });
+
+  it("eliminando un test sparisce anche il piano B degli altri test che puntava a lui", () => {
+    const { progetto, taskId, igrometro, spugna } = conCatena();
+    const conPiano = ok(impostaPianoB(progetto, taskId, igrometro, { tipo: "test", testId: spugna }));
+
+    const senzaSpugna = ok(eliminaTest(conPiano, taskId, spugna));
+    expect(rischiDi(senzaSpugna, taskId)[0].test.map((t) => t.titolo)).toEqual(["Igrometro"]);
+    expect(testDi(senzaSpugna, taskId, igrometro).pianoB).toBeUndefined();
   });
 });

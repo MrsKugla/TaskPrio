@@ -1,11 +1,17 @@
 // Aspetto degli attributi della task (etichette, colori, icone), come in GLOSSARY.md e negli appunti v3.
 import type { ReactNode } from "react";
-import type { CostoFocus, CostoTempo, Priorita, Stato } from "../regole";
+import type { CostoFocus, CostoTempo, EsitoTest, Priorita, Stato } from "../regole";
 
 export const ETICHETTE_STATO: Record<Stato, string> = {
   daFare: "Da fare",
   inCorso: "In corso",
   fatta: "Fatta",
+};
+
+export const ETICHETTE_ESITO: Record<EsitoTest, string> = {
+  daProvare: "Da provare",
+  passato: "Passato",
+  fallito: "Fallito",
 };
 
 export const ETICHETTE_PRIORITA: Record<Priorita, string> = {

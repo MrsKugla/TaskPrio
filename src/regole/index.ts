@@ -26,11 +26,24 @@ export type AttributiTask = {
 export const STATI = ["daFare", "inCorso", "fatta"] as const;
 export type Stato = (typeof STATI)[number];
 
+// Catena di verifica: la task ha rischi, ogni rischio ha test, ogni test al più un piano B.
+export const ESITI = ["daProvare", "passato", "fallito"] as const;
+export type EsitoTest = (typeof ESITI)[number];
+
+// Piano B di tipo test: un altro test dello stesso rischio, che nel grafo è già un nodo.
+// Di tipo azione: un testo, con un nodo suo nella catena.
+export type PianoB = { tipo: "test"; testId: string } | { tipo: "azione"; testo: string; posizione: Posizione };
+
+export type Test = { id: string; titolo: string; esito: EsitoTest; posizione: Posizione; pianoB?: PianoB };
+export type Rischio = { id: string; titolo: string; descrizione: string; posizione: Posizione; test: Test[] };
+
 export type Task = AttributiTask & {
   id: string;
   posizione: Posizione;
   creataIl: string;
   stato: Stato;
+  // Vuoto sulle task atomiche.
+  rischi: Rischio[];
   // Data in cui la presto alta è scaduta: da lì la task resta alta, anche se poi va in corso.
   prestoAltaScadutaIl?: string;
 };
@@ -53,13 +66,14 @@ export type Esito = { tipo: "ok"; progetto: Progetto } | { tipo: "rifiutato"; mo
 export type EsitoStato = Esito | { tipo: "richiedeConferma"; controsenso: string };
 export type OpzioniStato = { confermato?: boolean };
 
-const VALORI_INIZIALI: Omit<AttributiTask, "titolo"> & { stato: Stato } = {
+const VALORI_INIZIALI: Omit<AttributiTask, "titolo"> & Pick<Task, "stato" | "rischi"> = {
   descrizione: "",
   priorita: "media",
   costoFocus: "termometroBlu",
   costoTempo: "da1a4h",
   atomica: false,
   stato: "daFare",
+  rischi: [],
 };
 
 function rifiutato(motivo: string): Esito {
@@ -133,6 +147,15 @@ export function puoEssereAtomica(costoTempo: CostoTempo): boolean {
   return costoTempo === "meno1h" || costoTempo === "da1a4h";
 }
 
+// Perché la task non può diventare atomica, o undefined se può.
+// Diventare atomica cancellerebbe la catena: prima si tolgono i rischi.
+export function motivoNonAtomica(task: Task): string | undefined {
+  if (task.atomica) return undefined;
+  if (!puoEssereAtomica(task.costoTempo)) return "Una task oltre le 4h non può essere atomica";
+  if (task.rischi.length > 0) return "Una task con rischi non può essere atomica: elimina prima i rischi";
+  return undefined;
+}
+
 export function modificaTask(progetto: Progetto, taskId: string, modifiche: Partial<AttributiTask>): Esito {
   const attuale = progetto.task.find((t) => t.id === taskId);
   if (!attuale) return rifiutato("La task non esiste più.");
@@ -143,6 +166,11 @@ export function modificaTask(progetto: Progetto, taskId: string, modifiche: Part
   if (modifiche.titolo !== undefined) {
     aggiornata.titolo = modifiche.titolo.trim();
     if (!aggiornata.titolo) return rifiutato("Il titolo della task non può essere vuoto.");
+  }
+  if (modifiche.atomica && !attuale.atomica) {
+    // Si guarda la task già modificata: costo tempo e atomica possono cambiare insieme.
+    const motivo = motivoNonAtomica({ ...aggiornata, atomica: false });
+    if (motivo) return rifiutato(`${motivo}.`);
   }
   if (!puoEssereAtomica(aggiornata.costoTempo)) {
     if (modifiche.atomica) return rifiutato("Una task oltre le 4h non può essere atomica.");
@@ -408,4 +436,213 @@ export function taskInFocus(progetto: Progetto, taskId: string): Task[] {
     if (d.bloccanteId === taskId) ids.add(d.dipendenteId);
   }
   return progetto.task.filter((t) => ids.has(t.id));
+}
+
+// ——— Catena di verifica ———
+
+// Colonne della catena, da sinistra: task, rischi, test, piani B azione. La task sta ferma nell'origine.
+// Spazio di un nodo della catena: lo stile (app.css, .nodo-catena) lo tiene entro 180px e due righe.
+export const INGOMBRO_CATENA = { larghezza: 180, altezza: 64 } as const;
+const PASSO_CATENA_X = INGOMBRO_CATENA.larghezza + 60;
+const PASSO_CATENA_Y = INGOMBRO_CATENA.altezza + 20;
+const COLONNA_CATENA = { rischio: PASSO_CATENA_X, test: 2 * PASSO_CATENA_X, azione: 3 * PASSO_CATENA_X } as const;
+
+function posizioniCatena(rischi: Rischio[]): Posizione[] {
+  return rischi.flatMap((r) => [
+    r.posizione,
+    ...r.test.flatMap((t) => [t.posizione, ...(t.pianoB?.tipo === "azione" ? [t.pianoB.posizione] : [])]),
+  ]);
+}
+
+// Primo posto libero nella colonna, scendendo dall'altezza «da» (il nodo da cui il nuovo nodo parte).
+function postoLiberoCatena(rischi: Rischio[], colonna: keyof typeof COLONNA_CATENA, da: number): Posizione {
+  const occupate = posizioniCatena(rischi);
+  for (let y = da; ; y += PASSO_CATENA_Y) {
+    const posto = { x: COLONNA_CATENA[colonna], y };
+    const libero = !occupate.some(
+      (p) => Math.abs(p.x - posto.x) < INGOMBRO_CATENA.larghezza && Math.abs(p.y - posto.y) < INGOMBRO_CATENA.altezza,
+    );
+    if (libero) return posto;
+  }
+}
+
+// Applica «cambia» alla catena della task. «cambia» restituisce la catena nuova oppure il motivo del rifiuto.
+// Una task fatta ha la catena in sola lettura, come i suoi attributi; «disposizione» vale anche da fatta.
+function cambiaCatena(
+  progetto: Progetto,
+  taskId: string,
+  cambia: (rischi: Rischio[], task: Task) => Rischio[] | string,
+  disposizione = false,
+): Esito {
+  const task = progetto.task.find((t) => t.id === taskId);
+  if (!task) return rifiutato("La task non esiste più.");
+  if (task.stato === "fatta" && !disposizione) return rifiutato("Una task fatta non si modifica: riaprila prima.");
+  const rischi = cambia(task.rischi, task);
+  if (typeof rischi === "string") return rifiutato(rischi);
+  return { tipo: "ok", progetto: { ...progetto, task: progetto.task.map((t) => (t.id === taskId ? { ...t, rischi } : t)) } };
+}
+
+// Applica «cambia» al test indicato, ovunque sia nella catena.
+function cambiaTest(rischi: Rischio[], testId: string, cambia: (test: Test, rischio: Rischio) => Test | string): Rischio[] | string {
+  const rischio = rischi.find((r) => r.test.some((t) => t.id === testId));
+  if (!rischio) return "Il test non esiste più.";
+  const test = rischio.test.find((t) => t.id === testId)!;
+  const nuovo = cambia(test, rischio);
+  if (typeof nuovo === "string") return nuovo;
+  return rischi.map((r) => (r === rischio ? { ...r, test: r.test.map((t) => (t === test ? nuovo : t)) } : r));
+}
+
+export function aggiungiRischio(progetto: Progetto, taskId: string, dati: { titolo: string; descrizione?: string }): Esito {
+  return cambiaCatena(progetto, taskId, (rischi, task) => {
+    if (task.atomica) return "Una task atomica non ha rischi.";
+    const titolo = dati.titolo.trim();
+    if (!titolo) return "Il titolo del rischio non può essere vuoto.";
+    const rischio: Rischio = {
+      id: crypto.randomUUID(),
+      titolo,
+      descrizione: dati.descrizione ?? "",
+      posizione: postoLiberoCatena(rischi, "rischio", 0),
+      test: [],
+    };
+    return [...rischi, rischio];
+  });
+}
+
+export function modificaRischio(
+  progetto: Progetto,
+  taskId: string,
+  rischioId: string,
+  modifiche: { titolo?: string; descrizione?: string },
+): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) => {
+    if (!rischi.some((r) => r.id === rischioId)) return "Il rischio non esiste più.";
+    const titolo = modifiche.titolo?.trim();
+    if (titolo === "") return "Il titolo del rischio non può essere vuoto.";
+    return rischi.map((r) => (r.id === rischioId ? { ...r, ...modifiche, titolo: titolo ?? r.titolo } : r));
+  });
+}
+
+// Con il rischio spariscono i suoi test e i loro piani B.
+export function eliminaRischio(progetto: Progetto, taskId: string, rischioId: string): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) =>
+    rischi.some((r) => r.id === rischioId) ? rischi.filter((r) => r.id !== rischioId) : "Il rischio non esiste più.",
+  );
+}
+
+export function aggiungiTest(progetto: Progetto, taskId: string, rischioId: string, dati: { titolo: string }): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) => {
+    const rischio = rischi.find((r) => r.id === rischioId);
+    if (!rischio) return "Il rischio non esiste più.";
+    const titolo = dati.titolo.trim();
+    if (!titolo) return "Il titolo del test non può essere vuoto.";
+    const test: Test = {
+      id: crypto.randomUUID(),
+      titolo,
+      esito: "daProvare",
+      posizione: postoLiberoCatena(rischi, "test", rischio.posizione.y),
+    };
+    return rischi.map((r) => (r === rischio ? { ...r, test: [...r.test, test] } : r));
+  });
+}
+
+export function modificaTest(progetto: Progetto, taskId: string, testId: string, modifiche: { titolo: string }): Esito {
+  const titolo = modifiche.titolo.trim();
+  return cambiaCatena(progetto, taskId, (rischi) =>
+    cambiaTest(rischi, testId, (t) => (titolo ? { ...t, titolo } : "Il titolo del test non può essere vuoto.")),
+  );
+}
+
+// Con il test sparisce il suo piano B, e anche il piano B degli altri test che puntava a lui.
+export function eliminaTest(progetto: Progetto, taskId: string, testId: string): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) => {
+    if (!rischi.some((r) => r.test.some((t) => t.id === testId))) return "Il test non esiste più.";
+    return rischi.map((r) => ({
+      ...r,
+      test: r.test
+        .filter((t) => t.id !== testId)
+        .map((t) => {
+          if (t.pianoB?.tipo !== "test" || t.pianoB.testId !== testId) return t;
+          const { pianoB: _, ...senzaPiano } = t;
+          return senzaPiano;
+        }),
+    }));
+  });
+}
+
+export function impostaEsito(progetto: Progetto, taskId: string, testId: string, esito: EsitoTest): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) => cambiaTest(rischi, testId, (t) => ({ ...t, esito })));
+}
+
+// Il piano B sostituisce quello di prima. Di tipo test: un altro test dello stesso rischio.
+// Di tipo azione: se il test aveva già un'azione, il nodo resta dov'era.
+export function impostaPianoB(
+  progetto: Progetto,
+  taskId: string,
+  testId: string,
+  piano: { tipo: "test"; testId: string } | { tipo: "azione"; testo: string },
+): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) =>
+    cambiaTest(rischi, testId, (test, rischio) => {
+      if (piano.tipo === "test") {
+        if (piano.testId === testId) return "Un test non può essere il piano B di sé stesso.";
+        if (!rischio.test.some((t) => t.id === piano.testId)) return "Il piano B di un test è un altro test dello stesso rischio.";
+        return { ...test, pianoB: { tipo: "test", testId: piano.testId } };
+      }
+      const testo = piano.testo.trim();
+      if (!testo) return "Il testo dell'azione non può essere vuoto.";
+      const posizione = test.pianoB?.tipo === "azione" ? test.pianoB.posizione : postoLiberoCatena(rischi, "azione", test.posizione.y);
+      return { ...test, pianoB: { tipo: "azione", testo, posizione } };
+    }),
+  );
+}
+
+export function rimuoviPianoB(progetto: Progetto, taskId: string, testId: string): Esito {
+  return cambiaCatena(progetto, taskId, (rischi) =>
+    cambiaTest(rischi, testId, (test) => {
+      if (!test.pianoB) return "Il test non ha un piano B.";
+      const { pianoB: _, ...senzaPiano } = test;
+      return senzaPiano;
+    }),
+  );
+}
+
+// Nodo della catena da spostare. Un piano B azione si indica con l'id del suo test.
+export type RifNodoCatena = { tipo: "rischio" | "test" | "azione"; id: string };
+
+// La posizione è disposizione, non contenuto: si cambia anche su una task fatta.
+export function spostaNodoCatena(progetto: Progetto, taskId: string, nodo: RifNodoCatena, posizione: Posizione): Esito {
+  const p = { ...posizione };
+  return cambiaCatena(
+    progetto,
+    taskId,
+    (rischi) => {
+      if (nodo.tipo === "rischio") {
+        if (!rischi.some((r) => r.id === nodo.id)) return "Il rischio non esiste più.";
+        return rischi.map((r) => (r.id === nodo.id ? { ...r, posizione: p } : r));
+      }
+      return cambiaTest(rischi, nodo.id, (t) => {
+        if (nodo.tipo === "test") return { ...t, posizione: p };
+        if (t.pianoB?.tipo !== "azione") return "Il test non ha un piano B azione.";
+        return { ...t, pianoB: { ...t.pianoB, posizione: p } };
+      });
+    },
+    true,
+  );
+}
+
+// Rischi aperti: almeno un rischio non ancora verificato, cioè senza test o con un test non passato.
+export function haRischiAperti(task: Task): boolean {
+  return task.rischi.some((r) => r.test.length === 0 || r.test.some((t) => t.esito !== "passato"));
+}
+
+// Piani B da eseguire, cioè dei test falliti, nell'ordine della catena:
+// «testId» è il test fallito, «bersaglio» il nodo del piano B (l'altro test o l'azione).
+export function pianiBDaEseguire(task: Task): { testId: string; bersaglio: RifNodoCatena }[] {
+  return task.rischi.flatMap((r) =>
+    r.test.flatMap((t) => {
+      if (t.esito !== "fallito" || !t.pianoB) return [];
+      const bersaglio: RifNodoCatena = t.pianoB.tipo === "test" ? { tipo: "test", id: t.pianoB.testId } : { tipo: "azione", id: t.id };
+      return [{ testId: t.id, bersaglio }];
+    }),
+  );
 }

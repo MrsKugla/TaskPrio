@@ -1,5 +1,5 @@
 import { Handle, Position, useConnection, type Node, type NodeProps } from "@xyflow/react";
-import type { PrioritaEffettiva, Task } from "../regole";
+import { haRischiAperti, type PrioritaEffettiva, type Task } from "../regole";
 import { ETICHETTE_PRIORITA, ETICHETTE_STATO, IconaFocus, Pallini } from "./aspetto";
 
 export type NodoTask = Node<{ task: Task; effettiva: PrioritaEffettiva; bloccata: boolean }, "task">;
@@ -33,6 +33,11 @@ export function NodoTask({ id, data: { task, effettiva, bloccata }, selected }: 
           {bloccata && (
             <span role="img" aria-label="Bloccata" title="Bloccata: dipende da una task non fatta">
               🔒
+            </span>
+          )}
+          {haRischiAperti(task) && (
+            <span className="simbolo-rischi" role="img" aria-label="Rischi aperti" title="Rischi aperti: ci sono rischi senza test o con test non ancora passati">
+              ⚠
             </span>
           )}
           {task.atomica && (
