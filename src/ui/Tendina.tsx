@@ -30,6 +30,9 @@ type Props = {
   applica: (esito: Esito) => boolean;
   onChiudi: () => void;
   onApri: (taskId: string) => void;
+  inFocus: boolean;
+  // null esce dal focus.
+  onFocus: (taskId: string | null) => void;
 };
 
 function testoMotivo(motivo: MotivoAumento): string {
@@ -68,7 +71,7 @@ function ElencoTask(props: {
   );
 }
 
-export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri }: Props) {
+export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, inFocus, onFocus }: Props) {
   // Il titolo si modifica in locale: un titolo vuoto non si salva e all'uscita dal campo torna quello salvato.
   // Chi usa la tendina le dà key={task.id}, così il campo riparte a ogni cambio di task.
   const [titolo, setTitolo] = useState(task.titolo);
@@ -109,9 +112,20 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri }
     <aside className="tendina" aria-label="Dettagli della task">
       <header>
         <h2>Task</h2>
-        <button className="chiudi" onClick={onChiudi} aria-label="Chiudi" title="Chiudi (Esc)">
-          ×
-        </button>
+        <span className="azioni-tendina">
+          {/* Il focus è una vista, non una modifica: si usa anche su una task fatta. */}
+          <button
+            className={inFocus ? "attiva" : ""}
+            aria-pressed={inFocus}
+            onClick={() => onFocus(inFocus ? null : task.id)}
+            title={inFocus ? "Torna al grafo completo con i filtri di prima" : "Mostra solo questa task e le sue dipendenze"}
+          >
+            {inFocus ? "Esci dal focus" : "Focus"}
+          </button>
+          <button className="chiudi" onClick={onChiudi} aria-label="Chiudi" title="Chiudi (Esc)">
+            ×
+          </button>
+        </span>
       </header>
 
       {/* Una task fatta è in sola lettura: il fieldset disabilita tutti i campi finché non si usa «Riapri». */}

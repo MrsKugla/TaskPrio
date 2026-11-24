@@ -372,3 +372,40 @@ export function riordina(progetto: Progetto): Progetto {
 
   return { ...progetto, task: progetto.task.map((t) => ({ ...t, posizione: posizione.get(t.id)! })) };
 }
+
+// Filtri del grafo. Un gruppo vuoto non filtra; dentro un gruppo basta un valore, tra i gruppi servono tutti.
+export type Filtri = {
+  priorita: Priorita[];
+  costoFocus: CostoFocus[];
+  costoTempo: CostoTempo[];
+  stato: Stato[];
+  nascondiFatte: boolean;
+};
+
+// Al primo avvio non c'è alcun filtro, a parte «Nascondi fatte».
+export const FILTRI_INIZIALI: Filtri = { priorita: [], costoFocus: [], costoTempo: [], stato: [], nascondiFatte: true };
+
+const ammesso = <T>(scelti: T[], valore: T) => scelti.length === 0 || scelti.includes(valore);
+
+// Task che passano i filtri, nell'ordine del progetto. La priorità è quella effettiva, cioè il colore del nodo.
+export function taskVisibili(progetto: Progetto, effettive: Map<string, PrioritaEffettiva>, filtri: Filtri): Task[] {
+  return progetto.task.filter(
+    (t) =>
+      !(filtri.nascondiFatte && t.stato === "fatta") &&
+      ammesso(filtri.priorita, effettive.get(t.id)!.priorita) &&
+      ammesso(filtri.costoFocus, t.costoFocus) &&
+      ammesso(filtri.costoTempo, t.costoTempo) &&
+      ammesso(filtri.stato, t.stato),
+  );
+}
+
+// Focus su una task: lei, le task da cui dipende e le task che blocca, solo dirette e nell'ordine del progetto.
+// Non guarda i filtri, così si vedono anche le task fatte collegate.
+export function taskInFocus(progetto: Progetto, taskId: string): Task[] {
+  const ids = new Set([taskId]);
+  for (const d of progetto.dipendenze) {
+    if (d.dipendenteId === taskId) ids.add(d.bloccanteId);
+    if (d.bloccanteId === taskId) ids.add(d.dipendenteId);
+  }
+  return progetto.task.filter((t) => ids.has(t.id));
+}

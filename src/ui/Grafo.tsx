@@ -33,6 +33,10 @@ type Props = {
   applica: (esito: Esito) => boolean;
   selezionataId: string | null;
   onSeleziona: (taskId: string) => void;
+  // Task da mostrare: le altre restano nel progetto ma sono nascoste, con le loro frecce.
+  visibili: ReadonlySet<string>;
+  // Cambia entrando e uscendo dal focus: il grafo si inquadra di nuovo.
+  focusId: string | null;
 };
 
 const tipiNodo = { task: NodoTask };
@@ -44,7 +48,7 @@ const idFreccia = (bloccanteId: string, dipendenteId: string) => `${bloccanteId}
 type Bozza = { posizione: Posizione; schermo: { x: number; y: number } };
 type Misura = { width: number; height: number };
 
-function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona }: Props) {
+function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona, visibili, focusId }: Props) {
   const { fitView, screenToFlowPosition } = useReactFlow();
   const [bozza, setBozza] = useState<Bozza | null>(null);
   const [titolo, setTitolo] = useState("");
@@ -67,13 +71,21 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         dragging: trascinate.has(t.id),
         data: { task: t, effettiva: effettive.get(t.id)!, bloccata: bloccata(progetto, t.id) },
         selected: t.id === selezionataId,
+        hidden: !visibili.has(t.id),
         // Una task si elimina solo dalla tendina, con conferma: Canc vale solo per le frecce.
         deletable: false,
       })),
-    [progetto, effettive, selezionataId, trascinate, misure],
+    [progetto, effettive, selezionataId, trascinate, misure, visibili],
   );
 
-  // Dopo «Riordina» si inquadra il grafo, quando React Flow ha già le posizioni nuove.
+  // Entrando e uscendo dal focus cambiano le task visibili: si inquadrano quelle nuove.
+  const [focusPrecedente, setFocusPrecedente] = useState(focusId);
+  if (focusId !== focusPrecedente) {
+    setFocusPrecedente(focusId);
+    setDaAdattare(true);
+  }
+
+  // Dopo «Riordina» e al cambio di focus si inquadra il grafo, quando React Flow ha già i nodi nuovi.
   useEffect(() => {
     if (!daAdattare) return;
     setDaAdattare(false);

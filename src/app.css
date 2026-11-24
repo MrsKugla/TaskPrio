@@ -88,6 +88,77 @@ button:disabled {
   min-width: 220px;
 }
 
+/* Filtri sopra il grafo: gruppi di caselle in riga, che vanno a capo se lo spazio non basta. */
+.barra-filtri {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #d9dde2;
+  background: #fff;
+  font-size: 13px;
+}
+
+.barra-filtri fieldset.filtri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.barra-filtri fieldset.filtri:disabled {
+  opacity: 0.5;
+}
+
+.gruppo-filtro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* La legenda resta in riga con le caselle invece che sopra il bordo del fieldset. */
+.gruppo-filtro legend {
+  float: left;
+  padding: 0;
+  font-weight: 600;
+}
+
+.barra-filtri label.scelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.barra-filtri label.scelta:has(input:disabled) {
+  color: #9aa5b1;
+}
+
+.esci-focus {
+  margin-left: auto;
+  white-space: nowrap;
+  background: #1c7ed6;
+  border-color: #1c7ed6;
+  color: #fff;
+}
+
+.azioni-tendina {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.azioni-tendina button.attiva {
+  background: #1c7ed6;
+  border-color: #1c7ed6;
+  color: #fff;
+}
+
 .grafo {
   position: relative;
   flex: 1;

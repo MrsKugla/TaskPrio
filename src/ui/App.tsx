@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import {
+  FILTRI_INIZIALI,
   GIORNI_PRESTO_ALTA_PREDEFINITI,
   applicaPrestoAlta,
   creaProgetto,
   prioritaEffettive,
   ripristinaProgetto,
   rinominaProgetto,
+  taskInFocus,
+  taskVisibili,
   type Esito,
+  type Filtri,
   type PrioritaEffettiva,
   type Progetto,
 } from "../regole";
 import * as persistenza from "../persistenza";
+import { BarraFiltri } from "./BarraFiltri";
 import { Grafo } from "./Grafo";
 import { Conferma, ChiediTesto } from "./Dialoghi";
 import { Tendina } from "./Tendina";
@@ -36,6 +41,10 @@ export function App() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [giorniPrestoAlta, setGiorniPrestoAlta] = useState(GIORNI_PRESTO_ALTA_PREDEFINITI);
   const [controlloScadenze, setControlloScadenze] = useState(0);
+  // I filtri non si salvano: a ogni avvio si riparte da «Nascondi fatte» acceso.
+  const [filtri, setFiltri] = useState<Filtri>(FILTRI_INIZIALI);
+  // Durante il focus i filtri restano fermi: uscendo tornano quelli di prima.
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion().then(setVersione);
@@ -75,6 +84,7 @@ export function App() {
   const seleziona = (id: string | null) => {
     setAttivoId(id);
     setTaskId(null);
+    setFocusId(null);
     persistenza.impostaUltimoProgetto(id).catch(segnalaErrore);
   };
 
@@ -112,6 +122,16 @@ export function App() {
   };
   const taskAperta = pagina === "home" ? (attivo?.task.find((t) => t.id === taskId) ?? null) : null;
   const chiudiTendina = useCallback(() => setTaskId(null), []);
+  // Se la task in focus viene eliminata non c'è più nulla da mostrare in focus: si torna ai filtri.
+  const taskFocus = attivo?.task.find((t) => t.id === focusId) ?? null;
+  // La task aperta nella tendina resta visibile anche se non passa i filtri: appena creata o segnata fatta non sparisce.
+  const visibili = useMemo(() => {
+    if (!attivo) return new Set<string>();
+    const task = taskFocus ? taskInFocus(attivo, taskFocus.id) : taskVisibili(attivo, effettive, filtri);
+    const ids = new Set(task.map((t) => t.id));
+    if (taskAperta) ids.add(taskAperta.id);
+    return ids;
+  }, [attivo, effettive, filtri, taskFocus, taskAperta]);
 
   return (
     <div className="layout">
@@ -198,14 +218,19 @@ export function App() {
               </button>
             </header>
             {attivo ? (
-              <Grafo
-                key={attivo.id}
-                progetto={attivo}
-                effettive={effettive}
-                applica={applica}
-                selezionataId={taskAperta?.id ?? null}
-                onSeleziona={setTaskId}
-              />
+              <>
+                <BarraFiltri filtri={filtri} onCambia={setFiltri} focus={taskFocus} onEsciDalFocus={() => setFocusId(null)} />
+                <Grafo
+                  key={attivo.id}
+                  progetto={attivo}
+                  effettive={effettive}
+                  applica={applica}
+                  selezionataId={taskAperta?.id ?? null}
+                  onSeleziona={setTaskId}
+                  visibili={visibili}
+                  focusId={taskFocus?.id ?? null}
+                />
+              </>
             ) : (
               <p className="vuoto">Crea un progetto per iniziare.</p>
             )}
@@ -222,6 +247,8 @@ export function App() {
           applica={applica}
           onChiudi={chiudiTendina}
           onApri={setTaskId}
+          inFocus={taskAperta.id === taskFocus?.id}
+          onFocus={setFocusId}
         />
       )}
 

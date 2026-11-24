@@ -9,6 +9,7 @@ import {
   creaTask,
   dipendenti,
   eliminaTask,
+  FILTRI_INIZIALI,
   modificaTask,
   INGOMBRO_TASK,
   prioritaEffettive,
@@ -16,7 +17,11 @@ import {
   rinominaProgetto,
   riapri,
   riordina,
+  taskInFocus,
+  taskVisibili,
   ripristinaProgetto,
+  type AttributiTask,
+  type Filtri,
   type Priorita,
   type Progetto,
 } from "./index";
@@ -675,5 +680,79 @@ describe("task nuova senza posizione", () => {
 
     if (esito.tipo !== "ok") throw new Error("task non creata");
     expect(esito.progetto.task[0].posizione).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe("filtri", () => {
+  it("il filtro per priorità guarda la priorità effettiva, non quella scelta", () => {
+    // A è bassa ma blocca un'alta: la sua effettiva è alta.
+    const base = conDipendenze(progettoConTask("A", "B", "C"), ["A", "B"]);
+    const progetto = conPriorita(conPriorita(base, "bassa", "A", "C"), "alta", "B");
+    const filtri = { ...FILTRI_INIZIALI, priorita: ["alta"] as Priorita[] };
+
+    expect(titoli(taskVisibili(progetto, prioritaEffettive(progetto), filtri))).toEqual(["A", "B"]);
+  });
+});
+
+const visibili = (progetto: Progetto, filtri: Partial<Filtri>) =>
+  titoli(taskVisibili(progetto, prioritaEffettive(progetto), { ...FILTRI_INIZIALI, ...filtri }));
+
+describe("filtri: stato e «Nascondi fatte»", () => {
+  it("con i filtri iniziali le task fatte sono nascoste; spegnendo «Nascondi fatte» tornano", () => {
+    const progetto = conStato(conStato(progettoConTask("A", "B", "C"), "fatta", "A"), "inCorso", "B");
+
+    expect(visibili(progetto, {})).toEqual(["B", "C"]);
+    expect(visibili(progetto, { nascondiFatte: false })).toEqual(["A", "B", "C"]);
+  });
+
+  it("il filtro per stato tiene solo gli stati scelti", () => {
+    const progetto = conStato(conStato(progettoConTask("A", "B", "C"), "fatta", "A"), "inCorso", "B");
+
+    expect(visibili(progetto, { stato: ["inCorso"] })).toEqual(["B"]);
+    expect(visibili(progetto, { stato: ["fatta", "daFare"], nascondiFatte: false })).toEqual(["A", "C"]);
+  });
+});
+
+describe("filtri: costi e combinazioni", () => {
+  it("dentro un gruppo basta uno dei valori scelti, tra gruppi diversi servono tutti", () => {
+    const progetto = conAttributi(progettoConTask("A", "B", "C", "D"), {
+      A: { costoFocus: "neve", costoTempo: "meno1h" },
+      B: { costoFocus: "fuoco", costoTempo: "meno1h" },
+      C: { costoFocus: "neve", costoTempo: "oltre8h" },
+      D: { costoFocus: "termometroRosso", costoTempo: "meno1h" },
+    });
+
+    expect(visibili(progetto, { costoFocus: ["neve", "fuoco"] })).toEqual(["A", "B", "C"]);
+    expect(visibili(progetto, { costoTempo: ["oltre8h"] })).toEqual(["C"]);
+    expect(visibili(progetto, { costoFocus: ["neve", "fuoco"], costoTempo: ["meno1h"] })).toEqual(["A", "B"]);
+  });
+});
+
+function conAttributi(progetto: Progetto, perTitolo: Record<string, Partial<AttributiTask>>): Progetto {
+  return Object.entries(perTitolo).reduce((p, [nome, modifiche]) => {
+    const esito = modificaTask(p, id(p, nome), modifiche);
+    if (esito.tipo !== "ok") throw new Error(`${nome} non modificata`);
+    return esito.progetto;
+  }, progetto);
+}
+
+describe("focus su una task", () => {
+  it("contiene la task, le task da cui dipende e le task che blocca, solo dirette", () => {
+    // Prima → Bloccante → Centro → Dipendente → Ultima; Altra è scollegata.
+    const progetto = conDipendenze(
+      progettoConTask("Prima", "Bloccante", "Centro", "Dipendente", "Ultima", "Altra"),
+      ["Prima", "Bloccante"],
+      ["Bloccante", "Centro"],
+      ["Centro", "Dipendente"],
+      ["Dipendente", "Ultima"],
+    );
+
+    expect(titoli(taskInFocus(progetto, id(progetto, "Centro")))).toEqual(["Bloccante", "Centro", "Dipendente"]);
+  });
+
+  it("mostra anche le task fatte collegate: il focus non guarda i filtri", () => {
+    const progetto = conStato(conDipendenze(progettoConTask("A", "B"), ["A", "B"]), "fatta", "A");
+
+    expect(titoli(taskInFocus(progetto, id(progetto, "B")))).toEqual(["A", "B"]);
   });
 });
