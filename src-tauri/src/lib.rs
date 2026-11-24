@@ -1,25 +1,31 @@
 // Persistenza: salva e carica il modello in SQLite. Nessuna logica di dominio:
 // ogni progetto è un documento JSON prodotto dal modulo regole (TypeScript).
 
+mod backup;
+
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 
 struct Db(Mutex<Connection>);
 
 const CHIAVE_ULTIMO_PROGETTO: &str = "ultimo_progetto";
 const CHIAVE_GIORNI_PRESTO_ALTA: &str = "giorni_presto_alta";
+const CHIAVE_TEMA: &str = "tema";
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct DatiSalvati {
     progetti: Vec<Value>,
     ultimo_progetto_id: Option<String>,
     // Assente finché non si cambia nelle Impostazioni: il valore predefinito lo decide il modulo regole.
     giorni_presto_alta: Option<u32>,
+    // Assente finché non si sceglie: l'interfaccia parte dal tema chiaro.
+    tema: Option<String>,
 }
 
 fn apri(percorso: &std::path::Path) -> rusqlite::Result<Connection> {
@@ -29,6 +35,7 @@ fn apri(percorso: &std::path::Path) -> rusqlite::Result<Connection> {
          CREATE TABLE IF NOT EXISTS progetti (id TEXT PRIMARY KEY, dati TEXT NOT NULL);
          CREATE TABLE IF NOT EXISTS impostazioni (chiave TEXT PRIMARY KEY, valore TEXT NOT NULL);",
     )?;
+    backup::marca(&conn)?;
     Ok(conn)
 }
 
@@ -49,7 +56,22 @@ fn carica(conn: &Connection) -> rusqlite::Result<DatiSalvati> {
     };
     let ultimo_progetto_id = leggi(CHIAVE_ULTIMO_PROGETTO)?;
     let giorni_presto_alta = leggi(CHIAVE_GIORNI_PRESTO_ALTA)?.and_then(|v| v.parse().ok());
-    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta })
+    let tema = leggi(CHIAVE_TEMA)?;
+    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta, tema })
+}
+
+fn salva(conn: &Connection, progetto: &Value) -> Result<(), String> {
+    let id = progetto
+        .get("id")
+        .and_then(Value::as_str)
+        .ok_or("Progetto senza id")?;
+    conn.execute(
+        "INSERT INTO progetti (id, dati) VALUES (?1, ?2)
+         ON CONFLICT(id) DO UPDATE SET dati = excluded.dati",
+        params![id, progetto.to_string()],
+    )
+    .map(|_| ())
+    .map_err(|e| e.to_string())
 }
 
 fn scrivi_impostazione(conn: &Connection, chiave: &str, valore: &str) -> rusqlite::Result<usize> {
@@ -67,20 +89,7 @@ fn carica_dati(db: State<Db>) -> Result<DatiSalvati, String> {
 
 #[tauri::command]
 fn salva_progetto(db: State<Db>, progetto: Value) -> Result<(), String> {
-    let id = progetto
-        .get("id")
-        .and_then(Value::as_str)
-        .ok_or("Progetto senza id")?;
-    db.0
-        .lock()
-        .unwrap()
-        .execute(
-            "INSERT INTO progetti (id, dati) VALUES (?1, ?2)
-             ON CONFLICT(id) DO UPDATE SET dati = excluded.dati",
-            params![id, progetto.to_string()],
-        )
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+    salva(&db.0.lock().unwrap(), &progetto)
 }
 
 #[tauri::command]
@@ -110,9 +119,39 @@ fn imposta_giorni_presto_alta(db: State<Db>, giorni: u32) -> Result<(), String> 
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn imposta_tema(db: State<Db>, tema: String) -> Result<(), String> {
+    scrivi_impostazione(&db.0.lock().unwrap(), CHIAVE_TEMA, &tema)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn esporta_dati(db: State<Db>, percorso: PathBuf) -> Result<(), String> {
+    backup::esporta(&db.0.lock().unwrap(), &percorso)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Importati {
+    // I dati appena importati, da mostrare al posto di quelli di prima.
+    dati: DatiSalvati,
+    backup_automatico: PathBuf,
+}
+
+#[tauri::command]
+fn importa_dati(app: AppHandle, db: State<Db>, percorso: PathBuf) -> Result<Importati, String> {
+    let cartella = app.path().app_data_dir().map_err(|e| e.to_string())?.join("backup-automatici");
+    let mut conn = db.0.lock().unwrap();
+    let backup_automatico = backup::importa(&mut conn, &percorso, &cartella)?;
+    let dati = carica(&conn).map_err(|e| e.to_string())?;
+    Ok(Importati { dati, backup_automatico })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let cartella = app.path().app_data_dir()?;
             std::fs::create_dir_all(&cartella)?;
@@ -125,7 +164,10 @@ pub fn run() {
             salva_progetto,
             elimina_progetto,
             imposta_ultimo_progetto,
-            imposta_giorni_presto_alta
+            imposta_giorni_presto_alta,
+            imposta_tema,
+            esporta_dati,
+            importa_dati
         ])
         .run(tauri::generate_context!())
         .expect("errore all'avvio di TaskPrio");

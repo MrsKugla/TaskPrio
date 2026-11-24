@@ -1,8 +1,40 @@
 :root {
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
-  color: #1f2933;
-  background: #f5f6f8;
+  /* Colori del tema chiaro; il tema scuro li ridefinisce sotto. */
+  --testo: #1f2933;
+  --testo-tenue: #616e7c;
+  --testo-spento: #7b8794;
+  --testo-disattivo: #9aa5b1;
+  --sfondo: #f5f6f8;
+  --superficie: #fff;
+  --bordo: #d9dde2;
+  --bordo-campo: #c4c9d0;
+  --linea: #52606d;
+  --accento: #1c7ed6;
+  --collegamento: #1c7ed6;
+  color-scheme: light;
+  color: var(--testo);
+  background: var(--sfondo);
+}
+
+:root[data-tema="scuro"] {
+  --testo: #e4e7eb;
+  --testo-tenue: #9aa5b1;
+  --testo-spento: #7b8794;
+  --testo-disattivo: #616e7c;
+  --sfondo: #141a21;
+  --superficie: #1f2933;
+  --bordo: #3e4c59;
+  --bordo-campo: #52606d;
+  --linea: #9aa5b1;
+  --collegamento: #74c0fc;
+  color-scheme: dark;
+}
+
+/* I grafi seguono il tema dell'app: le regole di React Flow stanno in un @layer, quindi questa vince sulla sua classe «light». */
+:root[data-tema="scuro"] .react-flow {
+  color-scheme: dark;
 }
 
 * {
@@ -21,11 +53,11 @@ select,
 input {
   font: inherit;
   padding: 4px 10px;
-  border: 1px solid #c4c9d0;
+  border: 1px solid var(--bordo-campo);
   border-radius: 4px;
-  background: #fff;
-  /* Fisso come lo sfondo: dentro il grafo, col tema scuro di Windows, il testo ereditato sarebbe bianco. */
-  color: #1f2933;
+  background: var(--superficie);
+  /* Segue il tema dell'app, non quello di Windows: il testo ereditato dentro il grafo sarebbe di un altro colore. */
+  color: var(--testo);
 }
 
 button:disabled {
@@ -44,6 +76,7 @@ button:disabled {
   gap: 4px;
   padding: 12px;
   background: #1f2933;
+  border-right: 1px solid var(--bordo);
 }
 
 .menu h1 {
@@ -72,7 +105,7 @@ button:disabled {
 
 .versione {
   margin-top: auto;
-  color: #7b8794;
+  color: var(--testo-spento);
   font-size: 12px;
 }
 
@@ -80,8 +113,8 @@ button:disabled {
   display: flex;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #d9dde2;
-  background: #fff;
+  border-bottom: 1px solid var(--bordo);
+  background: var(--superficie);
 }
 
 .barra select {
@@ -94,8 +127,8 @@ button:disabled {
   align-items: center;
   gap: 12px;
   padding: 6px 12px;
-  border-bottom: 1px solid #d9dde2;
-  background: #fff;
+  border-bottom: 1px solid var(--bordo);
+  background: var(--superficie);
   font-size: 13px;
 }
 
@@ -136,7 +169,7 @@ button:disabled {
 }
 
 .barra-filtri label.scelta:has(input:disabled) {
-  color: #9aa5b1;
+  color: var(--testo-disattivo);
 }
 
 .esci-focus {
@@ -171,7 +204,7 @@ button:disabled {
 
 .vuoto {
   padding: 24px;
-  color: #616e7c;
+  color: var(--testo-tenue);
 }
 
 .impostazioni {
@@ -184,12 +217,36 @@ button:disabled {
   gap: 8px;
 }
 
+.impostazioni fieldset {
+  display: flex;
+  gap: 16px;
+  margin: 16px 0 0;
+  border: none;
+  padding: 0;
+}
+
+.impostazioni legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.impostazioni h3 {
+  margin: 24px 0 8px;
+  font-size: 14px;
+}
+
+.impostazioni .azioni-backup {
+  display: flex;
+  gap: 8px;
+}
+
 .impostazioni input[type="number"] {
   width: 5em;
 }
 
 .nota {
-  color: #616e7c;
+  color: var(--testo-tenue);
   font-size: 13px;
 }
 
@@ -197,8 +254,8 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   padding: 6px 12px;
-  background: #ffe3e3;
-  color: #a61e1e;
+  background: color-mix(in srgb, #e03131 18%, var(--superficie));
+  color: color-mix(in srgb, #e03131 70%, var(--testo));
 }
 
 .errore button {
@@ -213,8 +270,8 @@ button:disabled {
   width: 320px;
   padding: 12px 16px;
   overflow-y: auto;
-  border-left: 1px solid #d9dde2;
-  background: #fff;
+  border-left: 1px solid var(--bordo);
+  background: var(--superficie);
 }
 
 .tendina header {
@@ -244,8 +301,10 @@ button:disabled {
 .tendina textarea {
   font: inherit;
   padding: 4px 10px;
-  border: 1px solid #c4c9d0;
+  border: 1px solid var(--bordo-campo);
   border-radius: 4px;
+  background: var(--superficie);
+  color: var(--testo);
   resize: vertical;
 }
 
@@ -254,7 +313,7 @@ button:disabled {
   flex-direction: column;
   gap: 4px;
   margin: 0;
-  border: 1px solid #d9dde2;
+  border: 1px solid var(--bordo);
   border-radius: 4px;
 }
 
@@ -275,7 +334,7 @@ button:disabled {
 }
 
 .tendina fieldset.campi:disabled label {
-  color: #9aa5b1;
+  color: var(--testo-disattivo);
 }
 
 .riapri {
@@ -311,10 +370,10 @@ button:disabled {
   min-width: 140px;
   max-width: 220px;
   padding: 6px 10px;
-  border: 2px solid #52606d;
+  border: 2px solid var(--linea);
   border-radius: 6px;
   /* Il colore dice la priorità, il bordo lo stato. */
-  background: color-mix(in srgb, var(--priorita) 55%, #fff);
+  background: color-mix(in srgb, var(--priorita) 55%, var(--superficie));
   cursor: pointer;
 }
 
@@ -324,13 +383,13 @@ button:disabled {
 
 /* Fatta: pallida, il colore della priorità quasi sparisce. */
 .nodo-task.stato-fatta {
-  background: color-mix(in srgb, var(--priorita) 15%, #fff);
-  border-color: #b8c0c8;
-  color: #7b8794;
+  background: color-mix(in srgb, var(--priorita) 15%, var(--superficie));
+  border-color: var(--bordo-campo);
+  color: var(--testo-spento);
 }
 
 .nodo-task.selezionato {
-  box-shadow: 0 0 0 3px #1c7ed6;
+  box-shadow: 0 0 0 3px var(--accento);
 }
 
 .nodo-titolo {
@@ -351,7 +410,7 @@ button:disabled {
 
 .simbolo-atomica {
   font-size: 11px;
-  color: #52606d;
+  color: var(--linea);
 }
 
 .nodo-costi {
@@ -376,20 +435,22 @@ button:disabled {
 .pallino {
   width: 8px;
   height: 8px;
-  border: 1.5px solid #323f4b;
+  border: 1.5px solid var(--testo);
   border-radius: 50%;
 }
 
 .pallino.pieno {
-  background: #323f4b;
+  background: var(--testo);
 }
 
 .tendina label.scelta:has(input:disabled) {
-  color: #9aa5b1;
+  color: var(--testo-disattivo);
 }
 
 .dialogo {
-  border: 1px solid #c4c9d0;
+  border: 1px solid var(--bordo-campo);
+  background: var(--superficie);
+  color: var(--testo);
   border-radius: 6px;
   min-width: 320px;
 }
@@ -444,8 +505,8 @@ button:disabled {
 .nodo-task .partenza-dipendenza {
   width: 12px;
   height: 12px;
-  border: 2px solid #fff;
-  background: #52606d;
+  border: 2px solid var(--superficie);
+  background: var(--linea);
   cursor: crosshair;
 }
 
@@ -471,12 +532,12 @@ button:disabled {
 }
 
 .nodo-task .arrivo-dipendenza.attivo:hover {
-  outline: 3px dashed #1c7ed6;
+  outline: 3px dashed var(--accento);
   outline-offset: 2px;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #1c7ed6;
+  stroke: var(--accento);
   stroke-width: 3;
 }
 
@@ -499,7 +560,7 @@ button:disabled {
   border: none;
   background: transparent;
   text-align: left;
-  color: #1c7ed6;
+  color: var(--collegamento);
   cursor: pointer;
 }
 
@@ -509,7 +570,7 @@ button:disabled {
 
 .vuoto-piccolo {
   margin: 0;
-  color: #7b8794;
+  color: var(--testo-spento);
   font-size: 12px;
 }
 
@@ -528,7 +589,7 @@ button:disabled {
 .grafo-catena {
   position: relative;
   height: 260px;
-  border: 1px solid #d9dde2;
+  border: 1px solid var(--bordo);
   border-radius: 4px;
 }
 
@@ -537,7 +598,7 @@ button:disabled {
   inset: 0;
   z-index: 20;
   padding: 12px 16px;
-  background: #fff;
+  background: var(--superficie);
 }
 
 .catena.a-tutto-schermo .grafo-catena {
@@ -583,33 +644,33 @@ button:disabled {
   min-width: 110px;
   max-width: 180px;
   padding: 4px 8px;
-  border: 2px solid #52606d;
+  border: 2px solid var(--linea);
   border-radius: 6px;
-  background: #fff;
+  background: var(--superficie);
   font-size: 12px;
   overflow-wrap: anywhere;
   cursor: pointer;
 }
 
 .nodo-catena.selezionato {
-  box-shadow: 0 0 0 3px #1c7ed6;
+  box-shadow: 0 0 0 3px var(--accento);
 }
 
 .nodo-catena .tipo-nodo {
   font-size: 10px;
   text-transform: uppercase;
-  color: #616e7c;
+  color: var(--testo-tenue);
 }
 
 .catena-task {
-  background: #e4e7eb;
+  background: color-mix(in srgb, var(--linea) 20%, var(--superficie));
   font-weight: 600;
   cursor: default;
 }
 
 .catena-rischio {
   border-color: #f08c00;
-  background: #fff4e6;
+  background: color-mix(in srgb, #f08c00 12%, var(--superficie));
 }
 
 .catena-test.esito-daProvare {
@@ -618,17 +679,17 @@ button:disabled {
 
 .catena-test.esito-passato {
   border-color: #2f9e44;
-  background: #d3f9d8;
+  background: color-mix(in srgb, #2f9e44 20%, var(--superficie));
 }
 
 .catena-test.esito-fallito {
   border-color: #e03131;
-  background: #ffe3e3;
+  background: color-mix(in srgb, #e03131 15%, var(--superficie));
 }
 
 .catena-azione {
   border-color: #7048e8;
-  background: #f3f0ff;
+  background: color-mix(in srgb, #7048e8 12%, var(--superficie));
 }
 
 .catena-azione .crea-task,
@@ -646,7 +707,7 @@ button:disabled {
 .catena-azione .task-creata {
   border: none;
   background: none;
-  color: #5f3dc4;
+  color: color-mix(in srgb, #7048e8 75%, var(--testo));
   text-decoration: underline;
   cursor: pointer;
 }
@@ -692,8 +753,8 @@ button:disabled {
 .nodo-catena .partenza-piano-b {
   width: 10px;
   height: 10px;
-  border: 2px solid #fff;
-  background: #52606d;
+  border: 2px solid var(--superficie);
+  background: var(--linea);
   cursor: crosshair;
 }
 

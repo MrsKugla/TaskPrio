@@ -2,11 +2,24 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Progetto } from "./regole";
 
-// «giorniPrestoAlta» è assente finché non si cambia nelle Impostazioni.
-export type DatiSalvati = { progetti: Progetto[]; ultimoProgettoId: string | null; giorniPrestoAlta: number | null };
+export type Tema = "chiaro" | "scuro";
+
+// «giorniPrestoAlta» e «tema» sono assenti finché non si cambiano nelle Impostazioni.
+export type DatiSalvati = {
+  progetti: Progetto[];
+  ultimoProgettoId: string | null;
+  giorniPrestoAlta: number | null;
+  tema: Tema | null;
+};
 
 export const caricaDati = () => invoke<DatiSalvati>("carica_dati");
 export const salvaProgetto = (progetto: Progetto) => invoke<void>("salva_progetto", { progetto });
 export const eliminaProgetto = (id: string) => invoke<void>("elimina_progetto", { id });
 export const impostaUltimoProgetto = (id: string | null) => invoke<void>("imposta_ultimo_progetto", { id });
 export const impostaGiorniPrestoAlta = (giorni: number) => invoke<void>("imposta_giorni_presto_alta", { giorni });
+export const impostaTema = (tema: Tema) => invoke<void>("imposta_tema", { tema });
+export const esportaDati = (percorso: string) => invoke<void>("esporta_dati", { percorso });
+// Sostituisce tutti i dati con quelli del file, dopo averne salvato una copia in «backupAutomatico».
+// Un file non valido viene rifiutato con un messaggio e i dati restano com'erano.
+export const importaDati = (percorso: string) =>
+  invoke<{ dati: DatiSalvati; backupAutomatico: string }>("importa_dati", { percorso });

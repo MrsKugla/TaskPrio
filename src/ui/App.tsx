@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   FILTRI_INIZIALI,
   GIORNI_PRESTO_ALTA_PREDEFINITI,
@@ -18,7 +19,7 @@ import {
 import * as persistenza from "../persistenza";
 import { BarraFiltri } from "./BarraFiltri";
 import { Grafo } from "./Grafo";
-import { Conferma, ChiediTesto } from "./Dialoghi";
+import { Avviso, Conferma, ChiediTesto } from "./Dialoghi";
 import { Tendina } from "./Tendina";
 
 type Pagina = "home" | "impostazioni";
@@ -26,7 +27,26 @@ type Dialogo =
   | { tipo: "nuovo" }
   | { tipo: "rinomina"; progetto: Progetto }
   | { tipo: "elimina"; progetto: Progetto }
+  | { tipo: "importa"; percorso: string }
+  | { tipo: "avviso"; messaggio: string }
   | null;
+
+const FILTRO_BACKUP = [{ name: "Backup di TaskPrio", extensions: ["taskprio"] }];
+
+// Il tema vive nel database; la copia in localStorage serve solo a dipingere l'app col tema giusto
+// prima che i dati arrivino, senza un lampo di tema chiaro a ogni avvio.
+const CHIAVE_TEMA_RAPIDO = "tema";
+const temaIniziale = (): persistenza.Tema => (localStorage.getItem(CHIAVE_TEMA_RAPIDO) === "scuro" ? "scuro" : "chiaro");
+const applicaTema = (tema: persistenza.Tema) => {
+  document.documentElement.dataset.tema = tema;
+  localStorage.setItem(CHIAVE_TEMA_RAPIDO, tema);
+};
+applicaTema(temaIniziale());
+
+const oggi = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 // Ogni quanto si ricontrolla la scadenza delle presto alta con l'app aperta.
 const INTERVALLO_SCADENZE_MS = 60 * 60 * 1000;
@@ -40,6 +60,7 @@ export function App() {
   const [versione, setVersione] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [giorniPrestoAlta, setGiorniPrestoAlta] = useState(GIORNI_PRESTO_ALTA_PREDEFINITI);
+  const [tema, setTema] = useState<persistenza.Tema>(temaIniziale);
   const [controlloScadenze, setControlloScadenze] = useState(0);
   // I filtri non si salvano: a ogni avvio si riparte da «Nascondi fatte» acceso.
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_INIZIALI);
@@ -50,15 +71,23 @@ export function App() {
     getVersion().then(setVersione);
   }, []);
 
+  useEffect(() => applicaTema(tema), [tema]);
+
+  // All'avvio e dopo un'importazione: tutto lo stato riparte dai dati salvati.
+  const mostraDati = (dati: persistenza.DatiSalvati) => {
+    setProgetti(dati.progetti.map(ripristinaProgetto));
+    setGiorniPrestoAlta(dati.giorniPrestoAlta ?? GIORNI_PRESTO_ALTA_PREDEFINITI);
+    setTema(dati.tema === "scuro" ? "scuro" : "chiaro");
+    const ultimo = dati.progetti.find((p) => p.id === dati.ultimoProgettoId) ?? dati.progetti[0];
+    setAttivoId(ultimo?.id ?? null);
+    setTaskId(null);
+    setFocusId(null);
+  };
+
   useEffect(() => {
     persistenza
       .caricaDati()
-      .then((dati) => {
-        setProgetti(dati.progetti.map(ripristinaProgetto));
-        setGiorniPrestoAlta(dati.giorniPrestoAlta ?? GIORNI_PRESTO_ALTA_PREDEFINITI);
-        const ultimo = dati.progetti.find((p) => p.id === dati.ultimoProgettoId) ?? dati.progetti[0];
-        setAttivoId(ultimo?.id ?? null);
-      })
+      .then(mostraDati)
       .catch((e) => setErrore(`Impossibile caricare i dati: ${e}`));
   }, []);
 
@@ -120,6 +149,47 @@ export function App() {
     setGiorniPrestoAlta(giorni);
     persistenza.impostaGiorniPrestoAlta(giorni).catch(segnalaErrore);
   };
+
+  const cambiaTema = (nuovo: persistenza.Tema) => {
+    setTema(nuovo);
+    persistenza.impostaTema(nuovo).catch(segnalaErrore);
+  };
+
+  const esporta = async () => {
+    try {
+      const percorso = await save({ defaultPath: `taskprio-${oggi()}.taskprio`, filters: FILTRO_BACKUP });
+      if (!percorso) return;
+      await persistenza.esportaDati(percorso);
+      setDialogo({ tipo: "avviso", messaggio: `Dati esportati in ${percorso}` });
+    } catch (e) {
+      setErrore(String(e));
+    }
+  };
+
+  const scegliDaImportare = async () => {
+    try {
+      const percorso = await open({ multiple: false, directory: false, filters: FILTRO_BACKUP });
+      if (percorso) setDialogo({ tipo: "importa", percorso });
+    } catch (e) {
+      setErrore(String(e));
+    }
+  };
+
+  const importa = async (percorso: string) => {
+    setDialogo(null);
+    try {
+      const { dati, backupAutomatico } = await persistenza.importaDati(percorso);
+      mostraDati(dati);
+      setErrore(null);
+      setDialogo({ tipo: "avviso", messaggio: `Dati importati. I dati di prima sono salvati in ${backupAutomatico}` });
+    } catch (e) {
+      setErrore(String(e));
+      // Di solito il file è rifiutato senza toccare nulla; si ricarica comunque, così lo schermo mostra ciò che è salvato
+      // e un salvataggio successivo non mescola dati vecchi e importati.
+      persistenza.caricaDati().then(mostraDati).catch(() => {});
+    }
+  };
+
   const taskAperta = pagina === "home" ? (attivo?.task.find((t) => t.id === taskId) ?? null) : null;
   const chiudiTendina = useCallback(() => setTaskId(null), []);
   // Se la task in focus viene eliminata non c'è più nulla da mostrare in focus: si torna ai filtri.
@@ -189,6 +259,28 @@ export function App() {
             <p className="nota">
               Contati dalla creazione della task, se è ancora da fare. Il passaggio ad alta è definitivo: cambiare i giorni non
               lo annulla.
+            </p>
+
+            <fieldset>
+              <legend>Tema</legend>
+              <label>
+                <input type="radio" name="tema" checked={tema === "chiaro"} onChange={() => cambiaTema("chiaro")} />
+                Chiaro
+              </label>
+              <label>
+                <input type="radio" name="tema" checked={tema === "scuro"} onChange={() => cambiaTema("scuro")} />
+                Scuro
+              </label>
+            </fieldset>
+
+            <h3>Backup</h3>
+            <div className="azioni-backup">
+              <button onClick={esporta}>Esporta…</button>
+              <button onClick={scegliDaImportare}>Importa…</button>
+            </div>
+            <p className="nota">
+              Esporta salva progetti, task e impostazioni in un unico file, da copiare su un altro PC. Importa sostituisce tutti i
+              dati con quelli del file; prima salva da sola una copia dei dati attuali.
             </p>
           </section>
         ) : progetti === null ? (
@@ -277,6 +369,16 @@ export function App() {
           }}
         />
       )}
+      {dialogo?.tipo === "importa" && (
+        <Conferma
+          titolo="Importa backup"
+          messaggio={`Sostituire tutti i dati attuali con quelli di «${dialogo.percorso}»? Prima dell'importazione i dati attuali vengono salvati in un backup automatico.`}
+          etichettaConferma="Importa"
+          onAnnulla={() => setDialogo(null)}
+          onConferma={() => importa(dialogo.percorso)}
+        />
+      )}
+      {dialogo?.tipo === "avviso" && <Avviso messaggio={dialogo.messaggio} onChiudi={() => setDialogo(null)} />}
       {dialogo?.tipo === "elimina" && (
         <Conferma
           messaggio={`Eliminare il progetto «${dialogo.progetto.nome}» e tutte le sue task?`}
