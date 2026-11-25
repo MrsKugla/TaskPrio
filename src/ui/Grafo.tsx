@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Background,
   Controls,
   MarkerType,
   Panel,
@@ -213,7 +212,6 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         minZoom={0.1}
         fitView
       >
-        <Background />
         <Controls showInteractive={false} />
         <Panel position="top-right">
           <button

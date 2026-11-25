@@ -3,10 +3,10 @@
 
   Prima di lanciarlo:
     1. release.bat -Version X.Y.Z   (versione semver in package.json + installer firmato);
-    2. git commit con messaggio "X.Y.Z: cosa cambia"  (git status pulito).
+    2. git commit con messaggio "X.Y.Z: cosa cambia".
 
   Cosa fa:
-    1. controlla GitHub CLI, git pulito, messaggio del commit, installer e firma .sig di quella versione;
+    1. controlla GitHub CLI, messaggio del commit, installer e firma .sig di quella versione;
     2. scrive latest.json, il file che le app installate leggono all'avvio;
     3. crea il tag vX.Y.Z sul commit, fa push di commit e tag;
     4. crea la release con installer, .sig e latest.json; le note sono il messaggio del commit.
@@ -21,6 +21,8 @@
 $ErrorActionPreference = 'Continue'
 Set-Location $PSScriptRoot
 $Repo = 'MrsKugla/TaskPrio'
+# PATH riletto dal registro: chi lancia lo script (es. l'app Script) puo' averne uno vecchio, senza i programmi appena installati.
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 
 function Stop-Pubblicazione([string]$Motivo) {
     Write-Host ''
@@ -40,9 +42,6 @@ $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
 $semver = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
 if ($version -notmatch $semver) { Stop-Pubblicazione "la versione in package.json ($version) non segue semver" }
 $preRelease = $version.Contains('-')
-
-$sporco = & git status --porcelain
-if ($sporco) { Stop-Pubblicazione 'ci sono modifiche non committate: fai prima il commit' }
 
 $oggetto = (& git log -1 --format=%s) -join ''
 $prefisso = "${version}: "

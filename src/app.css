@@ -1,58 +1,123 @@
-/* I colori esadecimali stanno solo qui, nelle variabili dei temi: altrove si usa var(--…), così il tema scuro non resta indietro. */
+/* Stile «arcade»: tasti 3D che si schiacciano, titoli monospazio, effetto CRT regolabile.
+   I colori esadecimali stanno solo qui, nelle variabili dei temi: altrove si usa var(--…), così i due temi restano allineati. */
 /* stylelint-disable color-no-hex */
 :root {
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
-  /* Colori del tema chiaro; il tema scuro li ridefinisce sotto. */
-  --testo: #1f2933;
-  --testo-tenue: #616e7c;
-  --testo-spento: #7b8794;
-  --testo-disattivo: #9aa5b1;
-  --sfondo: #f5f6f8;
-  --superficie: #fff;
-  --bordo: #d9dde2;
-  --bordo-campo: #c4c9d0;
-  --linea: #52606d;
-  --accento: #1c7ed6;
-  --collegamento: #1c7ed6;
-  /* Uguali nei due temi: priorità, esiti, menu sempre scuro, testo sui pulsanti colorati. */
-  --rosso: #e03131;
-  --arancione: #fd7e14;
-  --giallo: #fcc419;
-  --verde: #40c057;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  /* Tema chiaro: plastica chiara su grigio caldo. Il tema scuro ridefinisce questo blocco sotto. */
+  --testo: #23252e;
+  --testo-tenue: #5c6170;
+  --testo-spento: #7a7f8c;
+  --testo-disattivo: #a3a7b1;
+  --sfondo: #e4e1dc;
+  --superficie: #f4f2ee;
+  --bordo: #d3cfc8;
+  --bordo-campo: #bfbab2;
+  --linea: #4a4e5a;
+  --collegamento: #1864ab;
+  --menu-sfondo: #d8d4cd;
+  /* Tasto: faccia in sfumatura, base piena sotto (lo spessore), ombra morbida per terra. */
+  --tasto: #fff;
+  --tasto-fondo: #e9e6e1;
+  --tasto-base: #a9a49b;
+  --ombra: rgb(60 50 40 / 18%);
+  --bagliore: rgb(28 126 214 / 35%);
+  --tratteggio-da-fare: rgb(255 255 255 / 70%);
+  --crt-righe: rgb(40 35 30 / 10%);
+  --crt-vignetta: rgb(40 35 30 / 30%);
+  /* Uguali nei due temi: priorità, esiti, accento, testo sui tasti colorati. */
+  --rosso: #f03e3e;
+  --rosso-chiaro: #ff5c6c;
+  --rosso-base: #8a1420;
+  --arancione: #ff922b;
+  --giallo: #ffd43b;
+  --verde: #51cf66;
   --verde-scuro: #2f9e44;
   --ambra: #f08c00;
   --oro: #fab005;
   --arancio-rischi: #e8590c;
   --viola: #7048e8;
-  --menu-sfondo: #1f2933;
-  --menu-testo: #cbd2d9;
-  --menu-attiva: #3e4c59;
+  --accento: #1c7ed6;
+  --accento-tasto: #1971c2;
+  --accento-tasto-fondo: #1560a0;
+  --accento-base: #0b3d6b;
   --su-colore: #fff;
+  --su-priorita: #15161c;
+  --nero: #000;
   color-scheme: light;
   color: var(--testo);
   background: var(--sfondo);
 }
 
 :root[data-tema="scuro"] {
-  --testo: #e4e7eb;
-  --testo-tenue: #9aa5b1;
-  --testo-spento: #7b8794;
-  --testo-disattivo: #616e7c;
-  --sfondo: #141a21;
-  --superficie: #1f2933;
-  --bordo: #3e4c59;
-  --bordo-campo: #52606d;
-  --linea: #9aa5b1;
+  --testo: #e8eaf0;
+  --testo-tenue: #a3aab8;
+  --testo-spento: #7b8191;
+  --testo-disattivo: #5b6070;
+  --sfondo: #14151c;
+  --superficie: #1e2029;
+  --bordo: #2e313d;
+  --bordo-campo: #3a3e4c;
+  --linea: #c3c8d4;
   --collegamento: #74c0fc;
+  --menu-sfondo: #0d0e13;
+  --tasto: #3a3e4c;
+  --tasto-fondo: #2b2e3a;
+  --tasto-base: #0d0e13;
+  --ombra: rgb(0 0 0 / 40%);
+  --bagliore: rgb(77 171 247 / 60%);
+  --tratteggio-da-fare: rgb(255 255 255 / 55%);
+  --crt-righe: rgb(0 0 0 / 18%);
+  --crt-vignetta: rgb(0 0 0 / 45%);
   color-scheme: dark;
 }
-
-/* I grafi seguono il tema dell'app: le regole di React Flow stanno in un @layer, quindi questa vince sulla sua classe «light». */
 /* stylelint-enable color-no-hex */
 
-:root[data-tema="scuro"] .react-flow {
-  color-scheme: dark;
+/* I grafi seguono il tema dell'app, non quello di Windows: React Flow di suo usa «light dark», cioè il tema del sistema.
+   Le sue regole stanno in un @layer, quindi questa vince. */
+.react-flow {
+  color-scheme: inherit;
+}
+
+h1,
+h2,
+h3,
+legend {
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+/* Effetto CRT: righe di scansione, bordi scuri, tremolio e testo un po' sbavato. --crt va da 0 a 1 (slider nel menu). */
+:root[data-crt] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, transparent 60%, var(--crt-vignetta) 100%),
+    repeating-linear-gradient(to bottom, var(--crt-righe) 0 1px, transparent 1px 3px);
+  opacity: var(--crt);
+  animation: crt-tremolio 120ms steps(2) infinite;
+}
+
+:root[data-crt] #root {
+  text-shadow:
+    calc(0.6px * var(--crt)) 0 rgb(255 0 80 / 35%),
+    calc(-0.6px * var(--crt)) 0 rgb(0 200 255 / 35%);
+}
+
+@keyframes crt-tremolio {
+  50% {
+    opacity: calc(var(--crt) * 0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-crt] body::after {
+    animation: none;
+  }
 }
 
 * {
@@ -66,20 +131,65 @@ body,
   margin: 0;
 }
 
-button,
+/* Il colore del testo segue il tema dell'app, non quello di Windows: dentro il grafo quello ereditato sarebbe diverso. */
 select,
-input {
+input,
+textarea {
   font: inherit;
   padding: 4px 10px;
   border: 1px solid var(--bordo-campo);
-  border-radius: 4px;
+  border-radius: 2px;
   background: var(--superficie);
-  /* Segue il tema dell'app, non quello di Windows: il testo ereditato dentro il grafo sarebbe di un altro colore. */
   color: var(--testo);
+}
+
+/* Ogni pulsante è un tasto 3D che si schiaccia. I controlli di zoom di React Flow restano i suoi:
+   le sue regole stanno in un @layer, quindi questa le scavalcherebbe e schiaccerebbe le icone. */
+button:not(.react-flow__controls-button) {
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 3px;
+  background: linear-gradient(var(--tasto), var(--tasto-fondo));
+  color: var(--testo);
+  box-shadow: 0 4px 0 var(--tasto-base), 0 6px 12px var(--ombra);
+  transition: transform 60ms, box-shadow 60ms;
+}
+
+button:not(.react-flow__controls-button):active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--tasto-base), 0 2px 4px var(--ombra);
 }
 
 button:disabled {
   opacity: 0.5;
+}
+
+/* Tasto acceso: voce del menu attiva, Focus attivo, uscita dal focus. */
+.menu button.attiva,
+.azioni-tendina button.attiva,
+button.esci-focus {
+  background: linear-gradient(var(--accento-tasto), var(--accento-tasto-fondo));
+  box-shadow: 0 4px 0 var(--accento-base), 0 6px 12px var(--ombra);
+  color: var(--su-colore);
+}
+
+/* Unico tasto rosso: eliminare. */
+button.pericolo {
+  background: linear-gradient(var(--rosso-chiaro), var(--rosso));
+  box-shadow: 0 4px 0 var(--rosso-base), 0 6px 12px var(--ombra);
+  color: var(--su-colore);
+}
+
+/* Pulsanti piatti: chiusure e collegamenti, che non sono azioni. */
+button.chiudi,
+button.voce-task,
+.errore button,
+.catena-azione button.task-creata {
+  padding: 0 4px;
+  background: none;
+  box-shadow: none;
 }
 
 .layout {
@@ -91,28 +201,42 @@ button:disabled {
 .menu {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   padding: 12px;
   background: var(--menu-sfondo);
-  border-right: 1px solid var(--bordo);
 }
 
 .menu h1 {
-  margin: 0 0 12px;
-  font-size: 18px;
-  color: var(--su-colore);
+  margin: 0 0 8px;
+  font-size: 20px;
+  text-shadow: 0 0 12px var(--bagliore);
 }
 
 .menu button {
   text-align: left;
-  border: none;
-  background: transparent;
-  color: var(--menu-testo);
 }
 
-.menu button.attiva {
-  background: var(--menu-attiva);
-  color: var(--su-colore);
+/* Lo slider sta in fondo al menu, sopra il numero di versione. */
+.regola-crt {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--testo-tenue);
+}
+
+.regola-crt input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  accent-color: var(--accento);
+}
+
+.regola-crt output {
+  min-width: 3ch;
+  text-align: right;
 }
 
 .centro {
@@ -122,7 +246,7 @@ button:disabled {
 }
 
 .versione {
-  margin-top: auto;
+  font-family: var(--mono);
   color: var(--testo-spento);
   font-size: 12px;
 }
@@ -144,17 +268,17 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--bordo);
   background: var(--superficie);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .barra-filtri fieldset.filtri {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 16px;
+  gap: 8px 28px;
   margin: 0;
   padding: 0;
   border: none;
@@ -167,7 +291,7 @@ button:disabled {
 .gruppo-filtro {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   margin: 0;
   padding: 0;
   border: none;
@@ -183,7 +307,19 @@ button:disabled {
 .barra-filtri label.scelta {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+}
+
+.barra-filtri input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accento);
+}
+
+.barra-filtri .campione {
+  width: 14px;
+  height: 14px;
 }
 
 .barra-filtri label.scelta:has(input:disabled) {
@@ -193,26 +329,18 @@ button:disabled {
 .esci-focus {
   margin-left: auto;
   white-space: nowrap;
-  background: var(--accento);
-  border-color: var(--accento);
-  color: var(--su-colore);
 }
 
 .azioni-tendina {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.azioni-tendina button.attiva {
-  background: var(--accento);
-  border-color: var(--accento);
-  color: var(--su-colore);
+  gap: 8px;
 }
 
 .grafo {
   position: relative;
   flex: 1;
+  background: var(--sfondo);
 }
 
 .bozza-task {
@@ -286,24 +414,64 @@ button:disabled {
 
 .aggiornamento .chiudi {
   margin-left: auto;
-  border: none;
-  background: transparent;
-}
-
-.errore button {
-  border: none;
-  background: transparent;
 }
 
 .tendina {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* La larghezza la decide la maniglia (Tendina.tsx); questo è il minimo. */
   width: 320px;
   padding: 12px 16px;
   overflow-y: auto;
-  border-left: 1px solid var(--bordo);
   background: var(--superficie);
+  box-shadow: -12px 0 30px var(--ombra);
+}
+
+/* Bordo sinistro trascinabile: fascia larga da afferrare, linea sottile visibile al passaggio.
+   La tendina scorre: la maniglia è «sticky» e alta zero nel flusso, così resta ferma sul bordo a tutta altezza
+   mentre il contenuto scorre, senza occupare spazio tra i campi (il margine annulla padding e gap). */
+.maniglia-tendina {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex: none;
+  width: 8px;
+  height: 0;
+  margin: -12px 0 -12px -16px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.maniglia-tendina::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100vh;
+}
+
+.maniglia-tendina::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 100vh;
+  left: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 120ms ease-out;
+}
+
+.maniglia-tendina:hover::after,
+.maniglia-tendina:focus-visible::after,
+.maniglia-tendina:active::after {
+  background: var(--accento);
+}
+
+.maniglia-tendina:focus-visible {
+  outline: none;
 }
 
 .tendina header {
@@ -318,8 +486,6 @@ button:disabled {
 }
 
 .tendina .chiudi {
-  border: none;
-  background: transparent;
   font-size: 18px;
 }
 
@@ -331,12 +497,6 @@ button:disabled {
 }
 
 .tendina textarea {
-  font: inherit;
-  padding: 4px 10px;
-  border: 1px solid var(--bordo-campo);
-  border-radius: 4px;
-  background: var(--superficie);
-  color: var(--testo);
   resize: vertical;
 }
 
@@ -346,7 +506,7 @@ button:disabled {
   gap: 4px;
   margin: 0;
   border: 1px solid var(--bordo);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .tendina label.scelta {
@@ -393,35 +553,39 @@ button:disabled {
 .campione {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: 2px;
   background: var(--priorita);
 }
 
 /* Larghezza massima e titolo su due righe: devono stare in INGOMBRO_TASK (src/regole), che evita le sovrapposizioni. */
+/* Ogni task è un tasto del colore della sua priorità; selezionata, si schiaccia. */
 .nodo-task {
   min-width: 140px;
   max-width: 220px;
   padding: 6px 10px;
-  border: 2px solid var(--linea);
-  border-radius: 6px;
-  /* Il colore dice la priorità, il bordo lo stato. */
-  background: color-mix(in srgb, var(--priorita) 55%, var(--superficie));
+  border-radius: 4px;
+  background: linear-gradient(color-mix(in srgb, var(--priorita) 85%, var(--su-colore)), var(--priorita));
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--priorita) 55%, var(--nero)), 0 10px 20px var(--ombra);
+  color: var(--su-priorita);
   cursor: pointer;
 }
 
+/* Da fare: tratteggio dentro il tasto. In corso: tasto pieno. */
 .nodo-task.stato-daFare {
-  border-style: dashed;
+  outline: 2px dashed var(--tratteggio-da-fare);
+  outline-offset: -5px;
 }
 
-/* Fatta: pallida, il colore della priorità quasi sparisce. */
+/* Fatta: tasto spento, il colore della priorità sparisce. */
 .nodo-task.stato-fatta {
-  background: color-mix(in srgb, var(--priorita) 15%, var(--superficie));
-  border-color: var(--bordo-campo);
+  background: linear-gradient(var(--tasto), var(--tasto-fondo));
+  box-shadow: 0 2px 0 var(--tasto-base);
   color: var(--testo-spento);
 }
 
 .nodo-task.selezionato {
-  box-shadow: 0 0 0 3px var(--accento);
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--priorita) 55%, var(--nero)), 0 0 0 3px var(--accento);
 }
 
 .nodo-titolo {
@@ -442,7 +606,6 @@ button:disabled {
 
 .simbolo-atomica {
   font-size: 11px;
-  color: var(--linea);
 }
 
 .nodo-costi {
@@ -464,15 +627,16 @@ button:disabled {
   gap: 3px;
 }
 
+/* Pallini scritti col colore del testo intorno: scuri sul tasto colorato, chiari nella tendina scura. */
 .pallino {
   width: 8px;
   height: 8px;
-  border: 1.5px solid var(--testo);
+  border: 1.5px solid currentcolor;
   border-radius: 50%;
 }
 
 .pallino.pieno {
-  background: var(--testo);
+  background: currentcolor;
 }
 
 .tendina label.scelta:has(input:disabled) {
@@ -483,7 +647,7 @@ button:disabled {
   border: 1px solid var(--bordo-campo);
   background: var(--superficie);
   color: var(--testo);
-  border-radius: 6px;
+  border-radius: 3px;
   min-width: 320px;
 }
 
@@ -503,12 +667,6 @@ button:disabled {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
-}
-
-.pericolo {
-  background: var(--rosso);
-  border-color: var(--rosso);
-  color: var(--su-colore);
 }
 
 .simboli {
@@ -553,7 +711,7 @@ button:disabled {
   height: 100%;
   transform: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   pointer-events: none;
 }
@@ -622,7 +780,7 @@ button:disabled {
   position: relative;
   height: 260px;
   border: 1px solid var(--bordo);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .catena.a-tutto-schermo {
@@ -677,7 +835,7 @@ button:disabled {
   max-width: 180px;
   padding: 4px 8px;
   border: 2px solid var(--linea);
-  border-radius: 6px;
+  border-radius: 3px;
   background: var(--superficie);
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -737,8 +895,6 @@ button:disabled {
 
 /* Collegamento alla task nata dal piano B: si apre con un clic. */
 .catena-azione .task-creata {
-  border: none;
-  background: none;
   color: color-mix(in srgb, var(--viola) 75%, var(--testo));
   text-decoration: underline;
   cursor: pointer;
@@ -772,13 +928,11 @@ button:disabled {
 
 .nodo-catena .esiti button.scelto:first-child {
   background: var(--verde-scuro);
-  border-color: var(--verde-scuro);
   color: var(--su-colore);
 }
 
 .nodo-catena .esiti button.scelto:last-child {
   background: var(--rosso);
-  border-color: var(--rosso);
   color: var(--su-colore);
 }
 
@@ -797,7 +951,7 @@ button:disabled {
   height: 100%;
   transform: none;
   border: none;
-  border-radius: 6px;
+  border-radius: 3px;
   background: transparent;
   z-index: -1;
 }

@@ -72,11 +72,67 @@ function ElencoTask(props: {
   );
 }
 
+// Larghezza della tendina, scelta trascinando il bordo sinistro. Resta uguale passando da una task all'altra
+// e alla riapertura: è una preferenza dello schermo, non un dato, quindi sta in localStorage e non nel backup.
+const CHIAVE_LARGHEZZA = "larghezza-tendina";
+const LARGHEZZA_MINIMA = 320;
+const larghezzaMassima = () => Math.max(LARGHEZZA_MINIMA, Math.round(window.innerWidth * 0.7));
+const limita = (px: number) => Math.min(larghezzaMassima(), Math.max(LARGHEZZA_MINIMA, Math.round(px)));
+const larghezzaSalvata = () => limita(Number(localStorage.getItem(CHIAVE_LARGHEZZA)) || LARGHEZZA_MINIMA);
+
+function ManigliaLarghezza({ larghezza, onCambia }: { larghezza: number; onCambia: (px: number) => void }) {
+  const salva = (px: number) => {
+    const nuova = limita(px);
+    onCambia(nuova);
+    localStorage.setItem(CHIAVE_LARGHEZZA, String(nuova));
+  };
+  return (
+    <div
+      className="maniglia-tendina"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Larghezza della tendina"
+      aria-valuenow={larghezza}
+      aria-valuemin={LARGHEZZA_MINIMA}
+      aria-valuemax={larghezzaMassima()}
+      tabIndex={0}
+      title="Trascina per allargare · doppio clic per tornare stretta"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        const maniglia = e.currentTarget;
+        maniglia.setPointerCapture(e.pointerId);
+        // La tendina sta sul bordo destro: allargarla vuol dire spostare la maniglia verso sinistra.
+        const destra = maniglia.parentElement!.getBoundingClientRect().right;
+        const muovi = (ev: PointerEvent) => salva(destra - ev.clientX);
+        const fine = () => {
+          maniglia.removeEventListener("pointermove", muovi);
+          maniglia.removeEventListener("pointerup", fine);
+          maniglia.removeEventListener("pointercancel", fine);
+        };
+        maniglia.addEventListener("pointermove", muovi);
+        maniglia.addEventListener("pointerup", fine);
+        maniglia.addEventListener("pointercancel", fine);
+      }}
+      onDoubleClick={() => salva(LARGHEZZA_MINIMA)}
+      onKeyDown={(e) => {
+        const passo = e.shiftKey ? 80 : 20;
+        if (e.key === "ArrowLeft") salva(larghezza + passo);
+        else if (e.key === "ArrowRight") salva(larghezza - passo);
+        else return;
+        // Le frecce non devono arrivare al grafo né al cambio variante del prototipo.
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    />
+  );
+}
+
 export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, inFocus, onFocus }: Props) {
   // Il titolo si modifica in locale: un titolo vuoto non si salva e all'uscita dal campo torna quello salvato.
   // Chi usa la tendina le dà key={task.id}, così il campo riparte a ogni cambio di task.
   const [titolo, setTitolo] = useState(task.titolo);
   const [confermaElimina, setConfermaElimina] = useState(false);
+  const [larghezza, setLarghezza] = useState(larghezzaSalvata);
   // Controsenso in attesa del «Sei sicura?»: confermando si ripete il comando con «confermato».
   const [controsenso, setControsenso] = useState<{ messaggio: string; conferma: () => void } | null>(null);
 
@@ -111,7 +167,8 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
   const nonAtomica = motivoNonAtomica(task);
 
   return (
-    <aside className="tendina" aria-label="Dettagli della task">
+    <aside className="tendina" aria-label="Dettagli della task" style={{ width: larghezza }}>
+      <ManigliaLarghezza larghezza={larghezza} onCambia={setLarghezza} />
       <header>
         <h2>Task</h2>
         <span className="azioni-tendina">

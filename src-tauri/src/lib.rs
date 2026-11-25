@@ -16,6 +16,7 @@ struct Db(Mutex<Connection>);
 const CHIAVE_ULTIMO_PROGETTO: &str = "ultimo_progetto";
 const CHIAVE_GIORNI_PRESTO_ALTA: &str = "giorni_presto_alta";
 const CHIAVE_TEMA: &str = "tema";
+const CHIAVE_CRT: &str = "crt";
 
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +27,8 @@ struct DatiSalvati {
     giorni_presto_alta: Option<u32>,
     // Assente finché non si sceglie: l'interfaccia parte dal tema chiaro.
     tema: Option<String>,
+    // Intensità dell'effetto CRT da 0 a 100; assente finché non si regola (l'interfaccia parte da 0).
+    crt: Option<u32>,
 }
 
 fn apri(percorso: &std::path::Path) -> rusqlite::Result<Connection> {
@@ -57,7 +60,8 @@ fn carica(conn: &Connection) -> rusqlite::Result<DatiSalvati> {
     let ultimo_progetto_id = leggi(CHIAVE_ULTIMO_PROGETTO)?;
     let giorni_presto_alta = leggi(CHIAVE_GIORNI_PRESTO_ALTA)?.and_then(|v| v.parse().ok());
     let tema = leggi(CHIAVE_TEMA)?;
-    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta, tema })
+    let crt = leggi(CHIAVE_CRT)?.and_then(|v| v.parse().ok());
+    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta, tema, crt })
 }
 
 fn salva(conn: &Connection, progetto: &Value) -> Result<(), String> {
@@ -127,6 +131,13 @@ fn imposta_tema(db: State<Db>, tema: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn imposta_crt(db: State<Db>, crt: u32) -> Result<(), String> {
+    scrivi_impostazione(&db.0.lock().unwrap(), CHIAVE_CRT, &crt.min(100).to_string())
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn esporta_dati(db: State<Db>, percorso: PathBuf) -> Result<(), String> {
     backup::esporta(&db.0.lock().unwrap(), &percorso)
 }
@@ -168,6 +179,7 @@ pub fn run() {
             imposta_ultimo_progetto,
             imposta_giorni_presto_alta,
             imposta_tema,
+            imposta_crt,
             esporta_dati,
             importa_dati
         ])

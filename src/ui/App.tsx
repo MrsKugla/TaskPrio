@@ -20,6 +20,7 @@ import * as persistenza from "../persistenza";
 import { BarraFiltri } from "./BarraFiltri";
 import { Grafo } from "./Grafo";
 import { Aggiornamento } from "./Aggiornamento";
+import { RegolaCrt } from "./RegolaCrt";
 import { Avviso, Conferma, ChiediTesto } from "./Dialoghi";
 import { Tendina } from "./Tendina";
 
@@ -34,15 +35,31 @@ type Dialogo =
 
 const FILTRO_BACKUP = [{ name: "Backup di TaskPrio", extensions: ["taskprio"] }];
 
-// Il tema vive nel database; la copia in localStorage serve solo a dipingere l'app col tema giusto
-// prima che i dati arrivino, senza un lampo di tema chiaro a ogni avvio.
-const CHIAVE_TEMA_RAPIDO = "tema";
-const temaIniziale = (): persistenza.Tema => (localStorage.getItem(CHIAVE_TEMA_RAPIDO) === "scuro" ? "scuro" : "chiaro");
-const applicaTema = (tema: persistenza.Tema) => {
-  document.documentElement.dataset.tema = tema;
-  localStorage.setItem(CHIAVE_TEMA_RAPIDO, tema);
+// Tema e CRT vivono nel database; la copia in localStorage serve solo a dipingere l'app giusta
+// prima che i dati arrivino, senza un lampo di tema chiaro o di CRT spento a ogni avvio.
+type Schermo = { tema: persistenza.Tema; crt: number };
+const CHIAVE_SCHERMO_RAPIDO = "schermo";
+const leggiSchermo = (dati: { tema?: string | null; crt?: number | null } | null): Schermo => ({
+  tema: dati?.tema === "scuro" ? "scuro" : "chiaro",
+  crt: Math.min(100, Math.max(0, Math.round(Number(dati?.crt) || 0))),
+});
+const schermoIniziale = (): Schermo => {
+  try {
+    return leggiSchermo(JSON.parse(localStorage.getItem(CHIAVE_SCHERMO_RAPIDO) ?? "null"));
+  } catch {
+    return leggiSchermo(null);
+  }
 };
-applicaTema(temaIniziale());
+const applicaSchermo = ({ tema, crt }: Schermo) => {
+  const radice = document.documentElement;
+  radice.dataset.tema = tema;
+  // Con il CRT a 0 l'effetto non c'è proprio: niente strato sopra l'app né animazione.
+  if (crt > 0) radice.dataset.crt = "";
+  else delete radice.dataset.crt;
+  radice.style.setProperty("--crt", String(crt / 100));
+  localStorage.setItem(CHIAVE_SCHERMO_RAPIDO, JSON.stringify({ tema, crt }));
+};
+applicaSchermo(schermoIniziale());
 
 const oggi = () => {
   const d = new Date();
@@ -61,7 +78,7 @@ export function App() {
   const [versione, setVersione] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [giorniPrestoAlta, setGiorniPrestoAlta] = useState(GIORNI_PRESTO_ALTA_PREDEFINITI);
-  const [tema, setTema] = useState<persistenza.Tema>(temaIniziale);
+  const [schermo, setSchermo] = useState<Schermo>(schermoIniziale);
   const [controlloScadenze, setControlloScadenze] = useState(0);
   // I filtri non si salvano: a ogni avvio si riparte da «Nascondi fatte» acceso.
   const [filtri, setFiltri] = useState<Filtri>(FILTRI_INIZIALI);
@@ -72,13 +89,13 @@ export function App() {
     getVersion().then(setVersione);
   }, []);
 
-  useEffect(() => applicaTema(tema), [tema]);
+  useEffect(() => applicaSchermo(schermo), [schermo]);
 
   // All'avvio e dopo un'importazione: tutto lo stato riparte dai dati salvati.
   const mostraDati = (dati: persistenza.DatiSalvati) => {
     setProgetti(dati.progetti.map(ripristinaProgetto));
     setGiorniPrestoAlta(dati.giorniPrestoAlta ?? GIORNI_PRESTO_ALTA_PREDEFINITI);
-    setTema(dati.tema === "scuro" ? "scuro" : "chiaro");
+    setSchermo(leggiSchermo(dati));
     const ultimo = dati.progetti.find((p) => p.id === dati.ultimoProgettoId) ?? dati.progetti[0];
     setAttivoId(ultimo?.id ?? null);
     setTaskId(null);
@@ -151,10 +168,11 @@ export function App() {
     persistenza.impostaGiorniPrestoAlta(giorni).catch(segnalaErrore);
   };
 
-  const cambiaTema = (nuovo: persistenza.Tema) => {
-    setTema(nuovo);
-    persistenza.impostaTema(nuovo).catch(segnalaErrore);
+  const cambiaTema = (tema: persistenza.Tema) => {
+    setSchermo((s) => ({ ...s, tema }));
+    persistenza.impostaTema(tema).catch(segnalaErrore);
   };
+  const salvaCrt = () => persistenza.impostaCrt(schermo.crt).catch(segnalaErrore);
 
   const esporta = async () => {
     try {
@@ -214,6 +232,7 @@ export function App() {
         <button className={pagina === "impostazioni" ? "attiva" : ""} onClick={() => setPagina("impostazioni")}>
           Impostazioni
         </button>
+        <RegolaCrt valore={schermo.crt} onCambia={(crt) => setSchermo((s) => ({ ...s, crt }))} onSalva={salvaCrt} />
         {versione && <span className="versione">v{versione}</span>}
       </nav>
 
@@ -266,11 +285,11 @@ export function App() {
             <fieldset>
               <legend>Tema</legend>
               <label>
-                <input type="radio" name="tema" checked={tema === "chiaro"} onChange={() => cambiaTema("chiaro")} />
+                <input type="radio" name="tema" checked={schermo.tema === "chiaro"} onChange={() => cambiaTema("chiaro")} />
                 Chiaro
               </label>
               <label>
-                <input type="radio" name="tema" checked={tema === "scuro"} onChange={() => cambiaTema("scuro")} />
+                <input type="radio" name="tema" checked={schermo.tema === "scuro"} onChange={() => cambiaTema("scuro")} />
                 Scuro
               </label>
             </fieldset>

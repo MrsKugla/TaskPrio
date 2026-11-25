@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Background,
   Controls,
   Handle,
   MarkerType,
@@ -535,7 +534,6 @@ function GrafoCatena(
         fitView
         fitViewOptions={{ maxZoom: 1 }}
       >
-        <Background />
         <Controls showInteractive={false} />
         <Panel position="top-right">
           <button onClick={onSchermoIntero} title={schermoIntero ? "Torna alla tendina (Esc)" : "Allarga a tutto schermo"}>
