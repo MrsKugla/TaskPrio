@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { COSTI_FOCUS, COSTI_TEMPO, PRIORITA, STATI, type Filtri, type Task } from "../regole";
 import { ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, IconaFocus } from "./aspetto";
 
@@ -12,7 +12,8 @@ type Props = {
 
 type Gruppo = Exclude<keyof Filtri, "nascondiFatte">;
 
-// Un gruppo di caselle: nessuna spuntata = nessun filtro su quel gruppo.
+// Un gruppo di caselle chiudibile: nessuna spuntata = nessun filtro su quel gruppo.
+// Chiuso mostra solo i valori scelti come chip, così la barra resta su una riga.
 function GruppoFiltro<T extends string>(props: {
   legenda: string;
   valori: readonly T[];
@@ -21,20 +22,42 @@ function GruppoFiltro<T extends string>(props: {
   etichetta: (valore: T) => ReactNode;
 }) {
   const { legenda, valori, scelti, onCambia, etichetta } = props;
+  // Solo in memoria: a ogni avvio i gruppi partono chiusi.
+  const [aperto, setAperto] = useState(false);
+  const idCaselle = useId();
+  // Ordine dei valori, non di spunta, così i chip non cambiano posto.
+  const attivi = valori.filter((v) => scelti.includes(v));
   return (
-    <fieldset className="gruppo-filtro">
-      <legend>{legenda}</legend>
-      {valori.map((v) => (
-        <label key={v} className="scelta">
-          <input
-            type="checkbox"
-            checked={scelti.includes(v)}
-            onChange={(e) => onCambia(e.target.checked ? [...scelti, v] : scelti.filter((s) => s !== v))}
-          />
-          {etichetta(v)}
-        </label>
-      ))}
-    </fieldset>
+    <div className={`gruppo-filtro${aperto ? " aperto" : ""}${attivi.length > 0 ? " attivo" : ""}`}>
+      <button
+        type="button"
+        className="gruppo-filtro-tasto"
+        aria-expanded={aperto}
+        aria-controls={idCaselle}
+        onClick={() => setAperto(!aperto)}
+      >
+        <span className="gruppo-filtro-nome">{legenda}</span>
+        {aperto
+          ? attivi.length > 0 && <span className="gruppo-filtro-conta">{attivi.length}</span>
+          : attivi.map((v) => (
+              <span key={v} className="gruppo-filtro-chip">
+                {etichetta(v)}
+              </span>
+            ))}
+      </button>
+      <div id={idCaselle} className="gruppo-filtro-caselle" role="group" aria-label={legenda} hidden={!aperto}>
+        {valori.map((v) => (
+          <label key={v} className="scelta">
+            <input
+              type="checkbox"
+              checked={scelti.includes(v)}
+              onChange={(e) => onCambia(e.target.checked ? [...scelti, v] : scelti.filter((s) => s !== v))}
+            />
+            {etichetta(v)}
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -17,6 +17,7 @@
   --linea: #4a4e5a;
   --collegamento: #1864ab;
   --menu-sfondo: #d8d4cd;
+  --incasso: #e9e6e1;
   /* Tasto: faccia in sfumatura, base piena sotto (lo spessore), ombra morbida per terra. */
   --tasto: #fff;
   --tasto-fondo: #e9e6e1;
@@ -62,6 +63,7 @@
   --linea: #c3c8d4;
   --collegamento: #74c0fc;
   --menu-sfondo: #0d0e13;
+  --incasso: #15161d;
   --tasto: #3a3e4c;
   --tasto-fondo: #2b2e3a;
   --tasto-base: #0d0e13;
@@ -131,20 +133,83 @@ body,
   margin: 0;
 }
 
-/* Il colore del testo segue il tema dell'app, non quello di Windows: dentro il grafo quello ereditato sarebbe diverso. */
+/* Campi incassati nel pannello, l'opposto dei tasti che sporgono.
+   Il colore del testo segue il tema dell'app, non quello di Windows: dentro il grafo quello ereditato sarebbe diverso. */
 select,
-input,
+input:not([type="checkbox"], [type="radio"], [type="range"]),
 textarea {
   font: inherit;
   padding: 4px 10px;
   border: 1px solid var(--bordo-campo);
   border-radius: 2px;
-  background: var(--superficie);
+  background: var(--incasso);
   color: var(--testo);
+  box-shadow: inset 0 2px 4px var(--ombra);
 }
 
-/* Ogni pulsante è un tasto 3D che si schiaccia. I controlli di zoom di React Flow restano i suoi:
-   le sue regole stanno in un @layer, quindi questa le scavalcherebbe e schiaccerebbe le icone. */
+/* Caselle e pallini di scelta: piccoli tasti che, accesi, restano schiacciati e si illuminano. */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0 0 3px;
+  /* Bordo trasparente: con il contrasto elevato di Windows sfumature e ombre spariscono, il bordo resta visibile. */
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: linear-gradient(var(--tasto), var(--tasto-fondo));
+  box-shadow: 0 3px 0 var(--tasto-base), 0 4px 8px var(--ombra);
+  cursor: pointer;
+  transition: transform 60ms, box-shadow 60ms;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  transform: translateY(2px);
+  background: linear-gradient(var(--accento-tasto), var(--accento-tasto-fondo));
+  box-shadow: 0 1px 0 var(--accento-base), 0 0 10px var(--bagliore);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border: solid var(--su-colore);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--su-colore);
+}
+
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accento);
+  outline-offset: 2px;
+}
+
+/* Ogni pulsante è un tasto 3D che si schiaccia. I controlli di zoom di React Flow hanno il loro tasto, più piccolo,
+   più sotto: questa regola li lascia fuori perché il suo padding schiaccerebbe le icone. */
 button:not(.react-flow__controls-button) {
   font: inherit;
   font-weight: 600;
@@ -166,12 +231,12 @@ button:disabled {
   opacity: 0.5;
 }
 
-/* Tasto acceso: voce del menu attiva, Focus attivo, uscita dal focus. */
+/* Tasto acceso: voce del menu attiva, Focus attivo, uscita dal focus. Si illumina come un tasto retroilluminato. */
 .menu button.attiva,
 .azioni-tendina button.attiva,
 button.esci-focus {
   background: linear-gradient(var(--accento-tasto), var(--accento-tasto-fondo));
-  box-shadow: 0 4px 0 var(--accento-base), 0 6px 12px var(--ombra);
+  box-shadow: 0 4px 0 var(--accento-base), 0 0 16px var(--bagliore);
   color: var(--su-colore);
 }
 
@@ -190,6 +255,37 @@ button.voce-task,
   padding: 0 4px;
   background: none;
   box-shadow: none;
+}
+
+/* Zoom e «adatta» dei grafi: tasti 3D anche loro, impilati in una colonna con un po' d'aria tra l'uno e l'altro. */
+.react-flow__controls {
+  display: flex;
+  gap: 6px;
+  box-shadow: none;
+}
+
+.react-flow .react-flow__controls-button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 3px;
+  background: linear-gradient(var(--tasto), var(--tasto-fondo));
+  color: var(--testo);
+  box-shadow: 0 3px 0 var(--tasto-base), 0 4px 8px var(--ombra);
+  transition: transform 60ms, box-shadow 60ms;
+}
+
+.react-flow .react-flow__controls-button:hover {
+  background: linear-gradient(var(--tasto), var(--tasto));
+}
+
+.react-flow .react-flow__controls-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--tasto-base);
+}
+
+.react-flow .react-flow__controls-button svg {
+  fill: currentcolor;
 }
 
 .layout {
@@ -278,43 +374,72 @@ button.voce-task,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 28px;
+  gap: 8px 12px;
   margin: 0;
   padding: 0;
   border: none;
 }
 
-.barra-filtri fieldset.filtri:disabled {
-  opacity: 0.5;
-}
-
+/* Ogni gruppo è un tasto con accanto le sue caselle, visibili solo da aperto. */
 .gruppo-filtro {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  border: none;
+  gap: 12px;
 }
 
-/* La legenda resta in riga con le caselle invece che sopra il bordo del fieldset. */
-.gruppo-filtro legend {
-  float: left;
-  padding: 0;
+.gruppo-filtro-caselle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* L'attributo hidden deve vincere sul display: flex qui sopra. */
+.gruppo-filtro-caselle[hidden] {
+  display: none;
+}
+
+.gruppo-filtro-tasto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+.gruppo-filtro-nome {
   font-weight: 600;
+}
+
+/* Aperto = tasto rimasto premuto e acceso. */
+.gruppo-filtro.aperto .gruppo-filtro-tasto {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 var(--tasto-base),
+    0 0 0 2px var(--accento);
+}
+
+.gruppo-filtro.attivo .gruppo-filtro-nome {
+  color: var(--accento);
+}
+
+/* Chip e conteggio solo da leggere: mostrano i filtri attivi senza aprire il gruppo. */
+.gruppo-filtro-chip,
+.gruppo-filtro-conta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--accento-tasto);
+  color: var(--su-colore);
+  font-size: 13px;
+  box-shadow: 0 0 6px var(--bagliore);
 }
 
 .barra-filtri label.scelta {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.barra-filtri input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--accento);
 }
 
 .barra-filtri .campione {
@@ -500,13 +625,27 @@ button.voce-task,
   resize: vertical;
 }
 
-.tendina fieldset {
+/* Riquadri dei campi della task: piastre in rilievo, più basse dei tasti, così si capisce cosa si preme e cosa no.
+   Solo i figli diretti del modulo: la catena di verifica ha i suoi fieldset, che restano piatti. */
+.tendina .campi > fieldset {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
-  border: 1px solid var(--bordo);
-  border-radius: 2px;
+  padding: 8px 10px 10px;
+  border: none;
+  border-radius: 3px;
+  background: linear-gradient(var(--tasto), var(--tasto-fondo));
+  box-shadow: 0 2px 0 var(--tasto-base), 0 3px 8px var(--ombra);
+}
+
+.tendina .campi > fieldset legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 2px;
+  font-size: 12px;
+  color: var(--testo-tenue);
 }
 
 .tendina label.scelta {
@@ -570,10 +709,16 @@ button.voce-task,
   cursor: pointer;
 }
 
-/* Da fare: tratteggio dentro il tasto. In corso: tasto pieno. */
+/* Da fare: tratteggio dentro il tasto. In corso: tasto pieno e retroilluminato del suo colore. */
 .nodo-task.stato-daFare {
   outline: 2px dashed var(--tratteggio-da-fare);
   outline-offset: -5px;
+}
+
+.nodo-task.stato-inCorso {
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--priorita) 55%, var(--nero)),
+    0 0 22px color-mix(in srgb, var(--priorita) 70%, transparent);
 }
 
 /* Fatta: tasto spento, il colore della priorità sparisce. */
@@ -583,9 +728,13 @@ button.voce-task,
   color: var(--testo-spento);
 }
 
+/* Selezionata: si schiaccia e si accende d'azzurro. */
 .nodo-task.selezionato {
   transform: translateY(4px);
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--priorita) 55%, var(--nero)), 0 0 0 3px var(--accento);
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--priorita) 55%, var(--nero)),
+    0 0 0 3px var(--accento),
+    0 0 18px var(--bagliore);
 }
 
 .nodo-titolo {
@@ -726,9 +875,35 @@ button.voce-task,
   outline-offset: 2px;
 }
 
+/* Frecce delle dipendenze: tratteggio che scorre nel verso della freccia, dalla task che dipende a quella da cui dipende.
+   Il colore passa da --xy-edge-stroke, così anche le punte (condivise da React Flow) lo seguono. */
+.grafo .react-flow {
+  --xy-edge-stroke: var(--linea);
+  --xy-edge-stroke-width: 2;
+}
+
+.grafo .react-flow__edge-path {
+  stroke-dasharray: 8 6;
+  animation: freccia-scorre 900ms linear infinite;
+}
+
+@keyframes freccia-scorre {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+/* Freccia selezionata (quella che Canc elimina): si ferma e diventa azzurra. */
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--accento);
   stroke-width: 3;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grafo .react-flow__edge-path {
+    animation: none;
+  }
 }
 
 .elenco-task h3 {
@@ -800,10 +975,15 @@ button.voce-task,
   max-width: 480px;
 }
 
+/* Fieldset usato solo per disabilitare tutto sulle task fatte: senza bordo né margini del browser, che lo farebbero sporgere. */
 .dettaglio-catena {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 .dettaglio-catena > label {
