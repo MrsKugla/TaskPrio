@@ -1,3 +1,5 @@
+/* I colori esadecimali stanno solo qui, nelle variabili dei temi: altrove si usa var(--…), così il tema scuro non resta indietro. */
+/* stylelint-disable color-no-hex */
 :root {
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
@@ -13,6 +15,20 @@
   --linea: #52606d;
   --accento: #1c7ed6;
   --collegamento: #1c7ed6;
+  /* Uguali nei due temi: priorità, esiti, menu sempre scuro, testo sui pulsanti colorati. */
+  --rosso: #e03131;
+  --arancione: #fd7e14;
+  --giallo: #fcc419;
+  --verde: #40c057;
+  --verde-scuro: #2f9e44;
+  --ambra: #f08c00;
+  --oro: #fab005;
+  --arancio-rischi: #e8590c;
+  --viola: #7048e8;
+  --menu-sfondo: #1f2933;
+  --menu-testo: #cbd2d9;
+  --menu-attiva: #3e4c59;
+  --su-colore: #fff;
   color-scheme: light;
   color: var(--testo);
   background: var(--sfondo);
@@ -33,6 +49,8 @@
 }
 
 /* I grafi seguono il tema dell'app: le regole di React Flow stanno in un @layer, quindi questa vince sulla sua classe «light». */
+/* stylelint-enable color-no-hex */
+
 :root[data-tema="scuro"] .react-flow {
   color-scheme: dark;
 }
@@ -75,26 +93,26 @@ button:disabled {
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  background: #1f2933;
+  background: var(--menu-sfondo);
   border-right: 1px solid var(--bordo);
 }
 
 .menu h1 {
   margin: 0 0 12px;
   font-size: 18px;
-  color: #fff;
+  color: var(--su-colore);
 }
 
 .menu button {
   text-align: left;
   border: none;
   background: transparent;
-  color: #cbd2d9;
+  color: var(--menu-testo);
 }
 
 .menu button.attiva {
-  background: #3e4c59;
-  color: #fff;
+  background: var(--menu-attiva);
+  color: var(--su-colore);
 }
 
 .centro {
@@ -175,9 +193,9 @@ button:disabled {
 .esci-focus {
   margin-left: auto;
   white-space: nowrap;
-  background: #1c7ed6;
-  border-color: #1c7ed6;
-  color: #fff;
+  background: var(--accento);
+  border-color: var(--accento);
+  color: var(--su-colore);
 }
 
 .azioni-tendina {
@@ -187,9 +205,9 @@ button:disabled {
 }
 
 .azioni-tendina button.attiva {
-  background: #1c7ed6;
-  border-color: #1c7ed6;
-  color: #fff;
+  background: var(--accento);
+  border-color: var(--accento);
+  color: var(--su-colore);
 }
 
 .grafo {
@@ -254,8 +272,8 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   padding: 6px 12px;
-  background: color-mix(in srgb, #e03131 18%, var(--superficie));
-  color: color-mix(in srgb, #e03131 70%, var(--testo));
+  background: color-mix(in srgb, var(--rosso) 18%, var(--superficie));
+  color: color-mix(in srgb, var(--rosso) 70%, var(--testo));
 }
 
 .errore button {
@@ -343,19 +361,19 @@ button:disabled {
 
 /* Colori della priorità, come negli appunti v3. */
 .priorita-alta {
-  --priorita: #e03131;
+  --priorita: var(--rosso);
 }
 
 .priorita-prestoAlta {
-  --priorita: #fd7e14;
+  --priorita: var(--arancione);
 }
 
 .priorita-media {
-  --priorita: #fcc419;
+  --priorita: var(--giallo);
 }
 
 .priorita-bassa {
-  --priorita: #40c057;
+  --priorita: var(--verde);
 }
 
 .campione {
@@ -474,9 +492,9 @@ button:disabled {
 }
 
 .pericolo {
-  background: #e03131;
-  border-color: #e03131;
-  color: #fff;
+  background: var(--rosso);
+  border-color: var(--rosso);
+  color: var(--su-colore);
 }
 
 .simboli {
@@ -511,7 +529,7 @@ button:disabled {
 }
 
 .nodo-task .partenza-dipendenza:hover {
-  background: #1c7ed6;
+  background: var(--accento);
 }
 
 /* Punto d'arrivo grande quanto il nodo, attivo solo mentre si trascina da un'altra task. */
@@ -669,8 +687,8 @@ button:disabled {
 }
 
 .catena-rischio {
-  border-color: #f08c00;
-  background: color-mix(in srgb, #f08c00 12%, var(--superficie));
+  border-color: var(--ambra);
+  background: color-mix(in srgb, var(--ambra) 12%, var(--superficie));
 }
 
 .catena-test.esito-daProvare {
@@ -678,18 +696,18 @@ button:disabled {
 }
 
 .catena-test.esito-passato {
-  border-color: #2f9e44;
-  background: color-mix(in srgb, #2f9e44 20%, var(--superficie));
+  border-color: var(--verde-scuro);
+  background: color-mix(in srgb, var(--verde-scuro) 20%, var(--superficie));
 }
 
 .catena-test.esito-fallito {
-  border-color: #e03131;
-  background: color-mix(in srgb, #e03131 15%, var(--superficie));
+  border-color: var(--rosso);
+  background: color-mix(in srgb, var(--rosso) 15%, var(--superficie));
 }
 
 .catena-azione {
-  border-color: #7048e8;
-  background: color-mix(in srgb, #7048e8 12%, var(--superficie));
+  border-color: var(--viola);
+  background: color-mix(in srgb, var(--viola) 12%, var(--superficie));
 }
 
 .catena-azione .crea-task,
@@ -707,14 +725,14 @@ button:disabled {
 .catena-azione .task-creata {
   border: none;
   background: none;
-  color: color-mix(in srgb, #7048e8 75%, var(--testo));
+  color: color-mix(in srgb, var(--viola) 75%, var(--testo));
   text-decoration: underline;
   cursor: pointer;
 }
 
 /* Piano B da eseguire: il test che lo precede è fallito. */
 .nodo-catena.da-eseguire {
-  outline: 3px solid #fab005;
+  outline: 3px solid var(--oro);
   outline-offset: 2px;
 }
 
@@ -723,7 +741,7 @@ button:disabled {
 }
 
 .react-flow__edge.freccia-piano-b.da-eseguire .react-flow__edge-path {
-  stroke: #f08c00;
+  stroke: var(--ambra);
   stroke-width: 2.5;
 }
 
@@ -739,15 +757,15 @@ button:disabled {
 }
 
 .nodo-catena .esiti button.scelto:first-child {
-  background: #2f9e44;
-  border-color: #2f9e44;
-  color: #fff;
+  background: var(--verde-scuro);
+  border-color: var(--verde-scuro);
+  color: var(--su-colore);
 }
 
 .nodo-catena .esiti button.scelto:last-child {
-  background: #e03131;
-  border-color: #e03131;
-  color: #fff;
+  background: var(--rosso);
+  border-color: var(--rosso);
+  color: var(--su-colore);
 }
 
 .nodo-catena .partenza-piano-b {
@@ -771,5 +789,5 @@ button:disabled {
 }
 
 .simbolo-rischi {
-  color: #e8590c;
+  color: var(--arancio-rischi);
 }
