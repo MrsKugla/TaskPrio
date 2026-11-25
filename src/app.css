@@ -276,6 +276,20 @@ button:disabled {
   color: color-mix(in srgb, var(--rosso) 70%, var(--testo));
 }
 
+.aggiornamento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accento) 15%, var(--superficie));
+}
+
+.aggiornamento .chiudi {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+}
+
 .errore button {
   border: none;
   background: transparent;

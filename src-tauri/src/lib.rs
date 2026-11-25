@@ -152,6 +152,8 @@ fn importa_dati(app: AppHandle, db: State<Db>, percorso: PathBuf) -> Result<Impo
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let cartella = app.path().app_data_dir()?;
             std::fs::create_dir_all(&cartella)?;

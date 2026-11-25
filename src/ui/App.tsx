@@ -19,6 +19,7 @@ import {
 import * as persistenza from "../persistenza";
 import { BarraFiltri } from "./BarraFiltri";
 import { Grafo } from "./Grafo";
+import { Aggiornamento } from "./Aggiornamento";
 import { Avviso, Conferma, ChiediTesto } from "./Dialoghi";
 import { Tendina } from "./Tendina";
 
@@ -217,6 +218,7 @@ export function App() {
       </nav>
 
       <main className="centro">
+        <Aggiornamento />
         {errore && (
           <div className="errore" role="alert">
             {errore}
