@@ -10,6 +10,7 @@ AGENTS.md
 TODO.md
 .scratch/
 docs/agents/
+.ai-workflows/
 
 # Configurazione locale degli strumenti (percorsi assoluti della macchina)
 script-buttons.json
@@ -41,3 +42,5 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 ~$*
+commit.bat
+commit.ps1
