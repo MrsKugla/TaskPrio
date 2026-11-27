@@ -1,18 +1,21 @@
-// Come si presenta l'app: stile (arcade o tern), tema chiaro o scuro, intensità del CRT.
+// Come si presenta l'app: stile (arcade o tern), tema chiaro o scuro, colori dello stile tern, intensità del CRT.
 // Vivono nel database; la copia in localStorage serve a dipingere l'app giusta prima che i dati arrivino,
 // senza un lampo di tema chiaro o di CRT spento a ogni avvio.
 //
 // Lo stile si sceglie una volta, all'avvio (main.tsx carica il suo foglio e, per tern, tern-ui.js):
 // i due fogli toccano tutta la pagina, quindi cambiare stile salva e ricarica la finestra.
 import { useLayoutEffect, useRef, type SelectHTMLAttributes } from "react";
-import type { Stile, Tema } from "../persistenza";
+import type { Colori, Stile, Tema } from "../persistenza";
 
-export type Schermo = { stile: Stile; tema: Tema; crt: number };
+export type Schermo = { stile: Stile; tema: Tema; colori: Colori; crt: number };
 const CHIAVE_SCHERMO_RAPIDO = "schermo";
 
-export const leggiSchermo = (dati: { stile?: string | null; tema?: string | null; crt?: number | null } | null): Schermo => ({
+export const leggiSchermo = (
+  dati: { stile?: string | null; tema?: string | null; colori?: string | null; crt?: number | null } | null,
+): Schermo => ({
   stile: dati?.stile === "tern" ? "tern" : "arcade",
   tema: dati?.tema === "scuro" ? "scuro" : "chiaro",
+  colori: dati?.colori === "titanium" ? "titanium" : "tern",
   crt: Math.min(100, Math.max(0, Math.round(Number(dati?.crt) || 0))),
 });
 
@@ -24,16 +27,24 @@ export const schermoIniziale = (): Schermo => {
   }
 };
 
-export const applicaSchermo = ({ stile, tema, crt }: Schermo) => {
+// Titanium esiste solo scuro: scelto, il tema resta scuro qualunque sia la scelta chiaro/scuro.
+export const soloScuro = (s: Schermo) => s.stile === "tern" && s.colori === "titanium";
+
+export const applicaSchermo = (schermo: Schermo) => {
+  const { stile, tema, colori, crt } = schermo;
   const radice = document.documentElement;
-  radice.dataset.tema = tema;
+  const scuro = tema === "scuro" || soloScuro(schermo);
+  radice.dataset.tema = scuro ? "scuro" : "chiaro";
   // tern-ui legge il tema da data-theme.
-  radice.dataset.theme = tema === "scuro" ? "dark" : "light";
+  radice.dataset.theme = scuro ? "dark" : "light";
+  // I colori di Titanium valgono solo nello stile tern (tema-titanium.css).
+  if (soloScuro(schermo)) radice.dataset.colori = colori;
+  else delete radice.dataset.colori;
   // Con il CRT a 0, o nello stile tern che non lo prevede, l'effetto non c'è proprio: niente strato sopra l'app né animazione.
   if (crt > 0 && stile === "arcade") radice.dataset.crt = "";
   else delete radice.dataset.crt;
   radice.style.setProperty("--crt", String(crt / 100));
-  localStorage.setItem(CHIAVE_SCHERMO_RAPIDO, JSON.stringify({ stile, tema, crt }));
+  localStorage.setItem(CHIAVE_SCHERMO_RAPIDO, JSON.stringify({ stile, tema, colori, crt }));
 };
 
 // Lo stile con cui questa finestra è partita: resta fisso fino al prossimo caricamento.

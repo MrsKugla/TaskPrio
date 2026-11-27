@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  creaSezione,
+  eliminaSezione,
+  rinominaSezione,
+  taskDellaSezione,
   aggiungiDipendenza,
   applicaPrestoAlta,
   bloccanti,
@@ -670,6 +674,109 @@ describe("«Riordina»", () => {
 
     const senzaPosizioni = (p: Progetto) => ({ ...p, task: p.task.map(({ posizione: _, ...resto }) => resto) });
     expect(senzaPosizioni(riordinato)).toEqual(senzaPosizioni(progetto));
+  });
+});
+
+function conSezione(progetto: Progetto, nome: string, ...titoliTask: string[]): Progetto {
+  const esito = creaSezione(progetto, titoliTask.map((t) => id(progetto, t)), nome);
+  if (esito.tipo !== "ok") throw new Error(`sezione ${nome} rifiutata`);
+  return esito.progetto;
+}
+
+const sezione = (progetto: Progetto, nome: string) => progetto.sezioni.find((s) => s.nome === nome)!;
+const y = (progetto: Progetto, titolo: string) => progetto.task.find((t) => t.titolo === titolo)!.posizione.y;
+
+describe("sezioni", () => {
+  it("raggruppa le task scelte in una sezione con un nome", () => {
+    const progetto = conSezione(progettoConTask("A", "B", "C"), "  Backend ", "A", "B");
+
+    expect(progetto.sezioni.map((s) => s.nome)).toEqual(["Backend"]);
+    expect(titoli(taskDellaSezione(progetto, sezione(progetto, "Backend").id))).toEqual(["A", "B"]);
+  });
+
+  it("rifiuta un nome vuoto o nessuna task", () => {
+    const progetto = progettoConTask("A");
+
+    expect(creaSezione(progetto, [id(progetto, "A")], "  ").tipo).toBe("rifiutato");
+    expect(creaSezione(progetto, [], "Backend").tipo).toBe("rifiutato");
+  });
+
+  it("una task sta in una sola sezione: raggruppata di nuovo, lascia la vecchia, che se vuota sparisce", () => {
+    const base = conSezione(progettoConTask("A", "B", "C"), "Vecchia", "A", "B");
+
+    const spostataUna = conSezione(base, "Nuova", "A");
+    expect(titoli(taskDellaSezione(spostataUna, sezione(spostataUna, "Vecchia").id))).toEqual(["B"]);
+
+    const svuotata = conSezione(spostataUna, "Ultima", "B");
+    expect(svuotata.sezioni.map((s) => s.nome)).toEqual(["Nuova", "Ultima"]);
+  });
+
+  it("si rinomina, e un nome vuoto è rifiutato", () => {
+    const progetto = conSezione(progettoConTask("A"), "Backend", "A");
+    const sezioneId = sezione(progetto, "Backend").id;
+
+    const esito = rinominaSezione(progetto, sezioneId, " Server ");
+
+    if (esito.tipo !== "ok") throw new Error("non rinominata");
+    expect(esito.progetto.sezioni.map((s) => s.nome)).toEqual(["Server"]);
+    expect(rinominaSezione(progetto, sezioneId, "").tipo).toBe("rifiutato");
+  });
+
+  it("eliminarla toglie solo la cornice: le task restano, dove erano", () => {
+    const progetto = conSezione(progettoConTask("A", "B"), "Backend", "A", "B");
+
+    const esito = eliminaSezione(progetto, sezione(progetto, "Backend").id);
+
+    if (esito.tipo !== "ok") throw new Error("non eliminata");
+    expect(esito.progetto.sezioni).toEqual([]);
+    expect(esito.progetto.task.map((t) => [t.titolo, t.posizione, t.sezioneId])).toEqual(
+      progetto.task.map((t) => [t.titolo, t.posizione, undefined]),
+    );
+  });
+
+  it("eliminata l'ultima task della sezione, la sezione sparisce", () => {
+    const progetto = conSezione(progettoConTask("A", "B"), "Backend", "A");
+
+    const esito = eliminaTask(progetto, id(progetto, "A"));
+
+    if (esito.tipo !== "ok") throw new Error("non eliminata");
+    expect(esito.progetto.sezioni).toEqual([]);
+  });
+
+  it("un progetto salvato prima delle sezioni si apre senza sezioni", () => {
+    const { sezioni: _, ...vecchio } = progettoConTask("A");
+
+    expect(ripristinaProgetto(vecchio as Progetto).sezioni).toEqual([]);
+  });
+});
+
+describe("«Riordina» con le sezioni", () => {
+  it("le task di una sezione stanno in una fascia loro, senza task di altre fasce in mezzo", () => {
+    // A e C in «Uno», B e D fuori: senza sezioni A e B, C e D sarebbero mescolate per colonna.
+    const base = conDipendenze(progettoConTask("A", "B", "C", "D"), ["A", "C"], ["B", "D"]);
+    const progetto = riordina(conSezione(base, "Uno", "A", "C"));
+
+    const fasciaUno = [y(progetto, "A"), y(progetto, "C")];
+    const fuori = [y(progetto, "B"), y(progetto, "D")];
+    // Tra le due fasce resta almeno una riga libera, per l'etichetta della cornice.
+    expect(Math.min(...fuori) - Math.max(...fasciaUno)).toBeGreaterThanOrEqual(2 * INGOMBRO_TASK.altezza);
+  });
+
+  it("le fasce seguono l'ordine delle sezioni, e le task senza sezione vanno in fondo", () => {
+    const base = progettoConTask("Fuori", "Secondo", "Primo");
+    const progetto = riordina(conSezione(conSezione(base, "Prima", "Primo"), "Seconda", "Secondo"));
+
+    expect(y(progetto, "Primo")).toBeLessThan(y(progetto, "Secondo"));
+    expect(y(progetto, "Secondo")).toBeLessThan(y(progetto, "Fuori"));
+  });
+
+  it("tiene le bloccanti a sinistra e nessuna task si sovrappone", () => {
+    const base = conDipendenze(progettoConTask("A", "B", "C", "D", "E"), ["A", "B"], ["C", "D"], ["B", "E"]);
+    const progetto = riordina(conSezione(conSezione(base, "Uno", "A", "D"), "Due", "B", "C"));
+
+    expect(x(progetto, "A")).toBeLessThan(x(progetto, "B"));
+    expect(x(progetto, "C")).toBeLessThan(x(progetto, "D"));
+    expect(sovrapposte(progetto)).toEqual([]);
   });
 });
 

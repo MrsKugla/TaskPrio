@@ -3,6 +3,7 @@
    Le parti delle task (grafo, nodi, filtri, tendina, catena di verifica) stanno in stile-tern-task.css. */
 @import url("./tern-ui/tern-ui.css");
 @import url("./stile-tern-task.css");
+@import url("./tema-titanium.css");
 
 html,
 body,
@@ -82,3 +83,24 @@ body,
   margin: 0;
   padding-left: 22px;
 }
+
+/* Campioni del tema Titanium nella scelta dei colori: i pallini della sua tavolozza, come nella scelta dei temi di Tern. */
+.campioni-titanium {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.campioni-titanium > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* stylelint-disable color-no-hex -- colori fissi del tema Titanium (alertRed, giallo, readoutGreen, ciano, electricBlue, viola) */
+.campioni-titanium > i:nth-child(1) { background: #ff4757; }
+.campioni-titanium > i:nth-child(2) { background: #f0c040; }
+.campioni-titanium > i:nth-child(3) { background: #00ff88; }
+.campioni-titanium > i:nth-child(4) { background: #13d1cd; }
+.campioni-titanium > i:nth-child(5) { background: #00b4ff; }
+.campioni-titanium > i:nth-child(6) { background: #d06fed; }
+/* stylelint-enable color-no-hex */

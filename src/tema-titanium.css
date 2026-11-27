@@ -1,0 +1,68 @@
+/* Tema «Titanium» di Tern, solo scuro, per lo stile tern. Si accende con <html data-colori="titanium">.
+   Colori del tema Titanium di Tern (0.9.x), riscritti con il permesso dell'autore di tern-ui; ogni nome tra
+   parentesi è quello del tema. Come fa Tern con i temi (themes.css), qui si cambiano solo i colori di base:
+   fondo, isole, inchiostro, accento, stati. Linee, vetri e veli di tern-ui li ricavano da soli dall'inchiostro.
+   È uno scuro fisso: i valori sono scritti senza light-dark(). */
+/* stylelint-disable color-no-hex */
+:root[data-colori="titanium"] {
+  color-scheme: dark;
+
+  /* Superfici: tavolo e barre (darkTitanium), isole (brushedTitanium), fogli e controlli un gradino sopra. */
+  --page: #0f1216;
+  --panel: #151820;
+  --card: #1c2029;
+  --raise: #222733;
+  --code-bg: #0f1216;
+  --tbl-head: #181b23;
+
+  /* Inchiostro (brightAluminum, dimAluminum, dim) e le linee che tern-ui ne ricava in trasparenza. */
+  --ink: #e8ecf4;
+  --t1: #e8ecf4;
+  --t2: #c3c9d3;
+  --t3: #9ca3b0;
+  --t4: #6b7280;
+  --ink2: rgb(from var(--ink) r g b / 66%);
+  --ink3: rgb(from var(--ink) r g b / 44%);
+  --ink4: rgb(from var(--ink) r g b / 14%);
+  --l1: rgb(from var(--ink) r g b / 6%);
+  --l2: rgb(from var(--ink) r g b / 9%);
+  --l3: rgb(from var(--ink) r g b / 14%);
+  --l4: rgb(from var(--ink) r g b / 22%);
+  --chip-bg: rgb(from var(--ink) r g b / 5.5%);
+  --well: rgb(from var(--ink) r g b / 3.5%);
+  --well-line: rgb(from var(--ink) r g b / 6.5%);
+  --card-bg: rgb(from var(--ink) r g b / 2.8%);
+  --grid-dot: rgb(from var(--ink) r g b / 7%);
+  --topbar-bg: rgb(from var(--page) r g b / 56%);
+
+  /* Accento: electricBlue, con deepBlue per i fondi pieni sotto testo bianco. */
+  --a1: #00b4ff;
+  --a2: #0082b3;
+  --accent: #00b4ff;
+  --accent-ink: #66d2ff;
+  --accent-fill: #0082b3;
+  --grad: linear-gradient(135deg, var(--a1), var(--a2));
+
+  /* Stati: readoutGreen, warningAmber, alertRed; «in corso» col viola e info col ciano della tavolozza. */
+  --ok: #00ff88;
+  --ok-ink: #00ff88;
+  --ok-fill: #00995a;
+  --warn: #ffb347;
+  --warn-ink: #ffb347;
+  --bad: #ff4757;
+  --bad-ink: #ff7b86;
+  --bad-fill: #c2303e;
+  --live: #d06fed;
+  --live-ink: #e69dfc;
+  --live-fill: #9a45b5;
+  --info: #13d1cd;
+  --info-ink: #75efea;
+  --muted: #9ca3b0;
+  --neutral: #e8ecf4;
+  --num: #f0c040;
+
+  /* Vetro di menu, finestre e avvisi: lo stesso fondo delle isole, quasi pieno, come Tern nello scuro. */
+  --pop-bg: rgb(28 32 41 / 98%);
+  --modal-bg: var(--pop-bg);
+}
+/* stylelint-enable color-no-hex */

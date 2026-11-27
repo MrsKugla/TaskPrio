@@ -156,6 +156,10 @@ export function App() {
     setSchermo((s) => ({ ...s, tema }));
     persistenza.impostaTema(tema).catch(segnalaErrore);
   };
+  const cambiaColori = (colori: persistenza.Colori) => {
+    setSchermo((s) => ({ ...s, colori }));
+    persistenza.impostaColori(colori).catch(segnalaErrore);
+  };
   const salvaCrt = () => persistenza.impostaCrt(schermo.crt).catch(segnalaErrore);
   // Lo stile cambia tutta la pagina: si salva, poi la finestra si ricarica con l'altro foglio.
   const cambiaStile = async (stile: persistenza.Stile) => {
@@ -259,6 +263,7 @@ export function App() {
               schermo={schermo}
               onStile={cambiaStile}
               onTema={cambiaTema}
+              onColori={cambiaColori}
               onEsporta={esporta}
               onImporta={scegliDaImportare}
             />
@@ -496,6 +501,7 @@ function ImpostazioniTern(props: {
   schermo: Schermo;
   onStile: (stile: persistenza.Stile) => void;
   onTema: (tema: persistenza.Tema) => void;
+  onColori: (colori: persistenza.Colori) => void;
   onEsporta: () => void;
   onImporta: () => void;
 }) {
@@ -556,21 +562,48 @@ function ImpostazioniTern(props: {
             </div>
             <div className="t-set">
               <div className="t-set-text">
-                <b>Tema</b>
+                <b>Colori</b>
+                <p>Quelli di tern-ui, oppure il tema Titanium di Tern, che è solo scuro.</p>
               </div>
               <div className="t-set-ctl">
-                <div className="t-seg lg" role="group" aria-label="Tema">
-                  <button aria-pressed={schermo.tema === "chiaro"} onClick={() => props.onTema("chiaro")}>
-                    <Icona nome="sun" />
-                    Chiaro
+                <div className="t-seg lg" role="group" aria-label="Colori">
+                  <button aria-pressed={schermo.colori === "tern"} onClick={() => props.onColori("tern")}>
+                    tern-ui
                   </button>
-                  <button aria-pressed={schermo.tema === "scuro"} onClick={() => props.onTema("scuro")}>
-                    <Icona nome="moon" />
-                    Scuro
+                  <button aria-pressed={schermo.colori === "titanium"} onClick={() => props.onColori("titanium")}>
+                    <span className="campioni-titanium" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    Titanium
                   </button>
                 </div>
               </div>
             </div>
+            {/* Titanium è solo scuro: la scelta chiaro/scuro torna con i colori di tern-ui. */}
+            {schermo.colori !== "titanium" && (
+              <div className="t-set">
+                <div className="t-set-text">
+                  <b>Tema</b>
+                </div>
+                <div className="t-set-ctl">
+                  <div className="t-seg lg" role="group" aria-label="Tema">
+                    <button aria-pressed={schermo.tema === "chiaro"} onClick={() => props.onTema("chiaro")}>
+                      <Icona nome="sun" />
+                      Chiaro
+                    </button>
+                    <button aria-pressed={schermo.tema === "scuro"} onClick={() => props.onTema("scuro")}>
+                      <Icona nome="moon" />
+                      Scuro
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
         <section>

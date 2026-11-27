@@ -10,24 +10,31 @@ import {
   useReactFlow,
   type Edge,
   type OnEdgesChange,
+  type OnNodeDrag,
   type OnNodesChange,
 } from "@xyflow/react";
 import {
   aggiungiDipendenza,
   bloccata,
+  creaSezione,
   creaTask,
+  eliminaSezione,
   eliminaTask,
+  INGOMBRO_TASK,
   rimuoviDipendenza,
+  rinominaSezione,
   riordina,
   spostaTask,
   type Esito,
   type Posizione,
   type PrioritaEffettiva,
   type Progetto,
+  type Sezione,
   type Task,
 } from "../regole";
-import { Avviso, Conferma } from "./Dialoghi";
+import { Avviso, ChiediTesto, Conferma } from "./Dialoghi";
 import { NodoTask } from "./NodoTask";
+import { MANIGLIA_SEZIONE, NodoSezione } from "./NodoSezione";
 import { Icona, TERN } from "./schermo";
 
 type Props = {
@@ -42,7 +49,18 @@ type Props = {
   focusId: string | null;
 };
 
-const tipiNodo = { task: NodoTask };
+const tipiNodo = { task: NodoTask, sezione: NodoSezione };
+type Nodo = NodoTask | NodoSezione;
+
+// Le cornici delle sezioni sono nodi anche loro: l'id dice quale sezione, senza confondersi con le task.
+const PREFISSO_SEZIONE = "sezione:";
+const idSezione = (s: Sezione) => PREFISSO_SEZIONE + s.id;
+// Margine della cornice intorno alle task e spazio in alto per l'etichetta.
+const MARGINE_SEZIONE = 18;
+const ETICHETTA_SEZIONE = 30;
+
+// Trascinamento di una sezione dalla sua etichetta: dove stavano la cornice e le sue task quando è partito.
+type SezioneTrascinata = { id: string; cornice: Posizione; task: Map<string, Posizione> };
 
 // Freccia dalla task che dipende (source) alla task da cui dipende (target): la freccia indica la dipendenza.
 const idFreccia = (bloccanteId: string, dipendenteId: string) => `${bloccanteId}->${dipendenteId}`;
@@ -65,8 +83,15 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
   // Misure dei nodi rilevate da React Flow: ripassate nei nodi, così ricostruirli non le azzera e le frecce restano agganciate.
   const [misure, setMisure] = useState<ReadonlyMap<string, Misura>>(new Map());
   const [daAdattare, setDaAdattare] = useState(false);
+  // Task scelte insieme (Maiusc + trascinamento, o Ctrl + clic), da raggruppare in una sezione.
+  const [scelte, setScelte] = useState<ReadonlySet<string>>(new Set());
+  const [chiediNomeSezione, setChiediNomeSezione] = useState(false);
+  const [sezioneDaTogliere, setSezioneDaTogliere] = useState<Sezione | null>(null);
+  const [sezioneTrascinata, setSezioneTrascinata] = useState<SezioneTrascinata | null>(null);
 
-  const nodi = useMemo<NodoTask[]>(
+  const posizioneDi = (t: Task) => trascinate.get(t.id) ?? t.posizione;
+
+  const nodiTask = useMemo<NodoTask[]>(
     () =>
       progetto.task.map((t) => ({
         id: t.id,
@@ -75,11 +100,55 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         measured: misure.get(t.id),
         dragging: trascinate.has(t.id),
         data: { task: t, effettiva: effettive.get(t.id)!, bloccata: bloccata(progetto, t.id) },
-        selected: t.id === selezionataId,
+        selected: t.id === selezionataId || scelte.has(t.id),
         hidden: !visibili.has(t.id),
       })),
-    [progetto, effettive, selezionataId, trascinate, misure, visibili],
+    [progetto, effettive, selezionataId, scelte, trascinate, misure, visibili],
   );
+
+  // Cornice di ogni sezione: il riquadro delle sue task visibili, più margine ed etichetta. Senza task visibili non si vede.
+  const nodiSezione = useMemo<NodoSezione[]>(
+    () =>
+      progetto.sezioni.flatMap((s) => {
+        const dentro = progetto.task.filter((t) => t.sezioneId === s.id && visibili.has(t.id));
+        if (dentro.length === 0) return [];
+        const riquadri = dentro.map((t) => {
+          const p = trascinate.get(t.id) ?? t.posizione;
+          const m = misure.get(t.id) ?? { width: INGOMBRO_TASK.larghezza, height: INGOMBRO_TASK.altezza };
+          return { x1: p.x, y1: p.y, x2: p.x + m.width, y2: p.y + m.height };
+        });
+        const x1 = Math.min(...riquadri.map((r) => r.x1)) - MARGINE_SEZIONE;
+        const y1 = Math.min(...riquadri.map((r) => r.y1)) - MARGINE_SEZIONE - ETICHETTA_SEZIONE;
+        const x2 = Math.max(...riquadri.map((r) => r.x2)) + MARGINE_SEZIONE;
+        const y2 = Math.max(...riquadri.map((r) => r.y2)) + MARGINE_SEZIONE;
+        return [
+          {
+            id: idSezione(s),
+            type: "sezione",
+            position: { x: x1, y: y1 },
+            width: x2 - x1,
+            height: y2 - y1,
+            // Sotto le task e le frecce; si afferra solo dall'etichetta.
+            zIndex: -1,
+            dragHandle: `.${MANIGLIA_SEZIONE}`,
+            selectable: false,
+            deletable: false,
+            focusable: false,
+            connectable: false,
+            dragging: sezioneTrascinata?.id === s.id,
+            data: {
+              nome: s.nome,
+              quante: dentro.length,
+              onRinomina: (nome: string) => applica(rinominaSezione(progetto, s.id, nome)),
+              onElimina: () => setSezioneDaTogliere(s),
+            },
+          },
+        ];
+      }),
+    [progetto, visibili, trascinate, misure, sezioneTrascinata, applica],
+  );
+
+  const nodi = useMemo<Nodo[]>(() => [...nodiSezione, ...nodiTask], [nodiSezione, nodiTask]);
 
   // Entrando e uscendo dal focus cambiano le task visibili: si inquadrano quelle nuove.
   const [focusPrecedente, setFocusPrecedente] = useState(focusId);
@@ -110,8 +179,8 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
     [progetto.dipendenze, frecceSelezionate],
   );
 
-  const suCambioNodi: OnNodesChange<NodoTask> = (cambi) => {
-    const dimensioni = cambi.getByType("dimensions").filter((c) => c.dimensions);
+  const suCambioNodi: OnNodesChange<Nodo> = (cambi) => {
+    const dimensioni = cambi.getByType("dimensions").filter((c) => c.dimensions && !c.id.startsWith(PREFISSO_SEZIONE));
     if (dimensioni.length > 0) {
       setMisure((attuali) => {
         const aggiornate = new Map(attuali);
@@ -120,7 +189,31 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
       });
     }
 
-    const spostamenti = cambi.getByType("position").filter((c) => c.position);
+    // Le task scelte insieme: le cornici non si scelgono.
+    const selezioni = cambi.getByType("select").filter((c) => !c.id.startsWith(PREFISSO_SEZIONE));
+    if (selezioni.length > 0) {
+      setScelte((attuali) => {
+        const nuove = new Set(attuali);
+        for (const c of selezioni) {
+          if (c.selected) nuove.add(c.id);
+          else nuove.delete(c.id);
+        }
+        return nuove;
+      });
+    }
+
+    const tutti = cambi.getByType("position").filter((c) => c.position);
+    // Una cornice trascinata sposta le sue task dello stesso tratto.
+    const sezione = tutti.find((c) => c.id.startsWith(PREFISSO_SEZIONE));
+    const spostamenti = tutti.filter((c) => !c.id.startsWith(PREFISSO_SEZIONE));
+    if (sezione && sezioneTrascinata) {
+      const dx = sezione.position!.x - sezioneTrascinata.cornice.x;
+      const dy = sezione.position!.y - sezioneTrascinata.cornice.y;
+      for (const [id, p] of sezioneTrascinata.task) {
+        spostamenti.push({ type: "position", id, position: { x: p.x + dx, y: p.y + dy }, dragging: sezione.dragging });
+      }
+      if (!sezione.dragging) setSezioneTrascinata(null);
+    }
     if (spostamenti.length === 0) return;
     // Rilascio del trascinamento o spostamento con le frecce della tastiera: si salva.
     const finiti = spostamenti.filter((c) => !c.dragging);
@@ -140,6 +233,21 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
       }
       return aggiornate;
     });
+  };
+
+  const suInizioTrascinamento: OnNodeDrag<Nodo> = (_, nodo) => {
+    if (nodo.type !== "sezione") return;
+    const sezioneId = nodo.id.slice(PREFISSO_SEZIONE.length);
+    const task = progetto.task.filter((t) => t.sezioneId === sezioneId);
+    setSezioneTrascinata({ id: sezioneId, cornice: nodo.position, task: new Map(task.map((t) => [t.id, posizioneDi(t)])) });
+  };
+
+  const raggruppa = (nome: string) => {
+    const esito = creaSezione(progetto, [...scelte], nome);
+    if (applica(esito)) {
+      setChiediNomeSezione(false);
+      setScelte(new Set());
+    }
   };
 
   const suCambioFrecce: OnEdgesChange = (cambi) => {
@@ -191,7 +299,12 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         nodes={nodi}
         edges={frecce}
         nodeTypes={tipiNodo}
-        onNodeClick={(_, nodo) => onSeleziona(nodo.id)}
+        // Un clic su una task la apre nella tendina; con Ctrl (o Maiusc + trascinamento) si scelgono più task insieme.
+        onNodeClick={(e, nodo) => {
+          if (nodo.type === "task" && !e.ctrlKey && !e.metaKey) onSeleziona(nodo.id);
+        }}
+        onPaneClick={() => setScelte(new Set())}
+        onNodeDragStart={suInizioTrascinamento}
         onNodesChange={suCambioNodi}
         onEdgesChange={suCambioFrecce}
         onEdgesDelete={suEliminaFrecce}
@@ -202,8 +315,8 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         // Canc elimina solo quelle. Senza, Canc sulla task apre il «Sei sicura?» e ferma l'eliminazione immediata.
         onBeforeDelete={async ({ nodes, edges }) => {
           if (document.querySelector("dialog[open]")) return false;
-          const scelte = edges.filter((f) => frecceSelezionate.has(f.id));
-          if (scelte.length > 0) return { nodes: [], edges: scelte };
+          const freccePrese = edges.filter((f) => frecceSelezionate.has(f.id));
+          if (freccePrese.length > 0) return { nodes: [], edges: freccePrese };
           if (nodes.length === 0) return true;
           const ids = new Set(nodes.map((n) => n.id));
           setDaEliminare(progetto.task.filter((t) => ids.has(t.id)));
@@ -218,6 +331,19 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         {/* Nello stile tern il grafo poggia sulla griglia a punti di tern-ui (--grid-dot); arcade resta a tinta unita. */}
         {TERN && <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} />}
         <Controls showInteractive={false} />
+        {/* Con più task scelte compare «Raggruppa»: le mette in una sezione nuova. */}
+        {scelte.size > 1 && (
+          <Panel position="top-center" className="azioni-scelte">
+            <span className={TERN ? "t-count" : "conta-scelte"}>{scelte.size} task</span>
+            <button className="t-btn sm primary" onClick={() => setChiediNomeSezione(true)}>
+              <Icona nome="layers" />
+              Raggruppa
+            </button>
+            <button className="t-btn icon sm quiet" aria-label="Annulla la scelta" onClick={() => setScelte(new Set())}>
+              {TERN ? <Icona nome="x" /> : "×"}
+            </button>
+          </Panel>
+        )}
         <Panel position="top-right">
           <button
             className="t-btn raised"
@@ -245,6 +371,26 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
           onConferma={() => {
             applica(daEliminare.reduce<Esito>((e, t) => (e.tipo === "ok" ? eliminaTask(e.progetto, t.id) : e), { tipo: "ok", progetto }));
             setDaEliminare(null);
+          }}
+        />
+      )}
+      {chiediNomeSezione && (
+        <ChiediTesto
+          titolo="Nuova sezione"
+          etichetta={`Nome della sezione (${scelte.size} task)`}
+          onAnnulla={() => setChiediNomeSezione(false)}
+          onConferma={raggruppa}
+        />
+      )}
+      {sezioneDaTogliere && (
+        <Conferma
+          titolo={`Togliere la sezione «${sezioneDaTogliere.nome}»?`}
+          messaggio="Spariscono la cornice e il nome; le task restano dove sono."
+          etichettaConferma="Togli"
+          onAnnulla={() => setSezioneDaTogliere(null)}
+          onConferma={() => {
+            applica(eliminaSezione(progetto, sezioneDaTogliere.id));
+            setSezioneDaTogliere(null);
           }}
         />
       )}

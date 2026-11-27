@@ -29,6 +29,10 @@ Condizione calcolata di una task che dipende da un'altra non ancora fatta; non �
 Proprietà di una task autoconclusiva, fatta in un solo passaggio e senza test particolari. Solo con costo tempo < 1h o 1–4h; oltre le 4h una task non può essere atomica.
 _Avoid_: semplice (come priorità)
 
+**Sezione**:
+Gruppo di task di un progetto con un nome, per categorizzarle; nel grafo è una cornice con un'etichetta intorno alle sue task. Una task sta al più in una sezione. Togliere la sezione non tocca le task.
+_Avoid_: gruppo, categoria, cartella
+
 ## Priorità
 
 **Priorità**:

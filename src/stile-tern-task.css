@@ -161,11 +161,14 @@
   box-shadow: var(--field-ring), var(--pop-shadow);
 }
 
-/* Nodo: come i bottoni del plugin Script Buttons di Tern (custom-script-buttons/host.luau e styles.css):
-   fondo del colore al 22%, filo pieno di 2px dello stesso colore, raggio 8. Qui il colore è la priorità.
+/* Nodo: la card di tern-ui con un tono (.t-card[data-tone], surfaces.css): anello sottile del colore, raggio 12,
+   ombra corta; fondo pieno come .t-card.solid, perché sotto c'è la griglia a punti. Il tono qui è la priorità.
+   Rispetto a tern-ui una sola aggiunta: il colore tinge anche il fondo, e nelle task in corso quel velo pulsa
+   come il bottone di uno script in esecuzione (plugin Script Buttons).
    Larghezza massima e titolo su due righe: devono stare in INGOMBRO_TASK (src/regole). */
 .nodo-task {
-  --riempimento: 22%;
+  --tc: var(--priorita);
+  --velo: 10%;
 
   position: relative;
   isolation: isolate;
@@ -175,44 +178,32 @@
   gap: 6px;
   min-width: 140px;
   max-width: 220px;
-  padding: 8px 10px;
-  border-radius: var(--r-ctl);
+  padding: 8px 12px 10px;
+  border-radius: var(--r-card);
   font-size: 13px;
   line-height: 1.4;
   color: var(--t1);
-  box-shadow: inset 0 0 0 2px var(--priorita);
+  background: var(--card);
+  box-shadow:
+    inset 0 0 0 1px light-dark(rgb(from var(--tc) r g b / 16%), rgb(from var(--tc) r g b / 20%)),
+    var(--lift-card);
+  transition: box-shadow var(--dur-turn) var(--ease);
   cursor: pointer;
 }
 
-/* Il fondo sta su uno strato a parte, sotto il testo: in corso pulsa solo lui, come il rettangolo del bottone. */
+/* Il velo del colore sta su uno strato a parte, sotto il testo: in corso pulsa solo lui. */
 .nodo-task::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgb(from var(--priorita) r g b / var(--riempimento));
+  background: rgb(from var(--tc) r g b / var(--velo));
 }
 
-/* Passaggio e clic: un velo d'inchiostro, come .csb-hit del plugin. */
-.nodo-task:hover::after,
-.nodo-task:active::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: rgb(from var(--t1) r g b / 7%);
-  pointer-events: none;
-}
-
-.nodo-task:active::after {
-  background: rgb(from var(--t1) r g b / 14%);
-}
-
-/* In corso: come il bottone di uno script in esecuzione, fondo al 42% che pulsa. */
+/* In corso: velo più carico che pulsa, al ritmo del bottone di uno script in esecuzione. */
 .nodo-task.stato-inCorso {
-  --riempimento: 42%;
+  --velo: 24%;
 }
 
 .nodo-task.stato-inCorso::before {
@@ -221,22 +212,24 @@
 
 @keyframes nodo-pulsa {
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 
-/* Fatta: il colore della priorità sparisce, resta un bottone spento in inchiostro da decorazione. */
+/* Fatta: la card neutra di tern-ui, senza velo, inchiostro spento. */
 .nodo-task.stato-fatta {
-  --priorita: var(--t4);
+  --tc: var(--neutral);
+  --velo: 0%;
 
   color: var(--t3);
 }
 
-/* Selezionata: l'anello della scelta di tern-ui attorno al filo del bottone. */
-.nodo-task.selezionato {
+/* Selezionata: come la card scelta di tern-ui (.t-card.selected), filo d'accento dentro e alone al 16%. */
+.nodo-task.selezionato,
+.nodo-task.selezionato:hover {
   box-shadow:
-    inset 0 0 0 2px var(--priorita),
-    var(--sel-ring);
+    inset 0 0 0 1px var(--accent),
+    0 0 0 3px rgb(from var(--accent) r g b / 16%);
 }
 
 .nodo-titolo {
@@ -809,4 +802,66 @@
 .react-flow__edge.freccia-piano-b.da-eseguire .react-flow__edge-path {
   stroke: var(--warn);
   stroke-width: 2;
+}
+
+/* ---------- Sezioni ---------- */
+/* Cornice della sezione: la colonna della board di tern-ui (t-lane, t-lane-head) allargata intorno alle sue task.
+   Lascia passare i clic al grafo; si afferra solo la testata. */
+.react-flow__node-sezione {
+  pointer-events: none;
+}
+
+.sezione.t-lane {
+  width: 100%;
+  height: 100%;
+  box-shadow: inset 0 0 0 1px var(--l1);
+}
+
+.sezione-etichetta.t-lane-head {
+  height: 30px;
+  gap: 8px;
+  padding: 0 4px 0 12px;
+  cursor: grab;
+  pointer-events: all;
+}
+
+.sezione-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sezione-etichetta .t-count {
+  margin-right: auto;
+}
+
+.sezione-campo.t-input {
+  width: 220px;
+  height: var(--h-sm);
+}
+
+/* La × compare solo passando sulla testata, come le azioni di riga di Tern. */
+.sezione-elimina {
+  opacity: 0;
+  transition: opacity var(--dur-state) var(--ease);
+}
+
+.sezione-etichetta:hover .sezione-elimina,
+.sezione-elimina:focus-visible {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* Barra «Raggruppa»: pannello di vetro di tern-ui sopra il grafo. */
+.azioni-scelte {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 12px;
+  border-radius: var(--r-card);
+  background: var(--pop-bg);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  box-shadow: var(--pop-shadow);
 }

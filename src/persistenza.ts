@@ -5,14 +5,17 @@ import type { Progetto } from "./regole";
 export type Tema = "chiaro" | "scuro";
 // Aspetto dell'interfaccia: «arcade» (tasti 3D e CRT) o «tern» (i componenti di tern-ui).
 export type Stile = "arcade" | "tern";
+// Colori dello stile tern: quelli di tern-ui, o quelli del tema Titanium di Tern (solo scuro).
+export type Colori = "tern" | "titanium";
 
-// «giorniPrestoAlta», «stile», «tema» e «crt» sono assenti finché non si cambiano.
+// «giorniPrestoAlta», «stile», «tema», «colori» e «crt» sono assenti finché non si cambiano.
 export type DatiSalvati = {
   progetti: Progetto[];
   ultimoProgettoId: string | null;
   giorniPrestoAlta: number | null;
   stile: Stile | null;
   tema: Tema | null;
+  colori: Colori | null;
   // Intensità dell'effetto CRT, da 0 (spento) a 100.
   crt: number | null;
 };
@@ -24,6 +27,7 @@ export const impostaUltimoProgetto = (id: string | null) => invoke<void>("impost
 export const impostaGiorniPrestoAlta = (giorni: number) => invoke<void>("imposta_giorni_presto_alta", { giorni });
 export const impostaStile = (stile: Stile) => invoke<void>("imposta_stile", { stile });
 export const impostaTema = (tema: Tema) => invoke<void>("imposta_tema", { tema });
+export const impostaColori = (colori: Colori) => invoke<void>("imposta_colori", { colori });
 export const impostaCrt = (crt: number) => invoke<void>("imposta_crt", { crt });
 export const esportaDati = (percorso: string) => invoke<void>("esporta_dati", { percorso });
 // Sostituisce tutti i dati con quelli del file, dopo averne salvato una copia in «backupAutomatico».

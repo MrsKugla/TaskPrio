@@ -46,7 +46,13 @@ export type Task = AttributiTask & {
   rischi: Rischio[];
   // Data in cui la presto alta è scaduta: da lì la task resta alta, anche se poi va in corso.
   prestoAltaScadutaIl?: string;
+  // Sezione del grafo in cui sta la task: al più una.
+  sezioneId?: string;
 };
+
+// Sezione: un gruppo di task con un nome, disegnato nel grafo come una cornice intorno a loro.
+// Non ha posizione né misure sue: la cornice si calcola dalle task che contiene.
+export type Sezione = { id: string; nome: string };
 
 // La task «dipendenteId» non può partire prima che «bloccanteId» sia fatta.
 export type Dipendenza = { bloccanteId: string; dipendenteId: string };
@@ -57,6 +63,8 @@ export type Progetto = {
   creatoIl: string;
   task: Task[];
   dipendenze: Dipendenza[];
+  // Nell'ordine di creazione: è anche l'ordine dall'alto in basso dopo «Riordina».
+  sezioni: Sezione[];
 };
 
 // «cerchio» elenca, in ordine, le task di una dipendenza rifiutata perché chiuderebbe un cerchio.
@@ -85,7 +93,7 @@ export function creaProgetto(nome: string, ora: Date): Esito {
   if (!pulito) return rifiutato("Il nome del progetto non può essere vuoto.");
   return {
     tipo: "ok",
-    progetto: { id: crypto.randomUUID(), nome: pulito, creatoIl: ora.toISOString(), task: [], dipendenze: [] },
+    progetto: { id: crypto.randomUUID(), nome: pulito, creatoIl: ora.toISOString(), task: [], dipendenze: [], sezioni: [] },
   };
 }
 
@@ -101,6 +109,7 @@ export function ripristinaProgetto(salvato: Progetto): Progetto {
     ...salvato,
     task: salvato.task.map((t) => ({ ...VALORI_INIZIALI, ...t })),
     dipendenze: salvato.dipendenze ?? [],
+    sezioni: salvato.sezioni ?? [],
   };
 }
 
@@ -184,7 +193,51 @@ export function eliminaTask(progetto: Progetto, taskId: string): Esito {
   // Con la task spariscono anche le sue dipendenze, in entrambe le direzioni, e il collegamento dal piano B da cui era nata.
   const dipendenze = progetto.dipendenze.filter((d) => d.bloccanteId !== taskId && d.dipendenteId !== taskId);
   const task = progetto.task.filter((t) => t.id !== taskId).map((t) => scollegaDaPianiB(t, taskId));
-  return { tipo: "ok", progetto: { ...progetto, task, dipendenze } };
+  return { tipo: "ok", progetto: senzaSezioniVuote({ ...progetto, task, dipendenze }) };
+}
+
+// ---------- Sezioni ----------
+
+// Una sezione senza task non ha più nulla da incorniciare: sparisce.
+function senzaSezioniVuote(progetto: Progetto): Progetto {
+  const usate = new Set(progetto.task.map((t) => t.sezioneId));
+  const sezioni = progetto.sezioni.filter((s) => usate.has(s.id));
+  return sezioni.length === progetto.sezioni.length ? progetto : { ...progetto, sezioni };
+}
+
+// Raggruppa le task indicate in una sezione nuova. Una task sta in una sola sezione:
+// se era già in un'altra ne esce, e la sezione rimasta vuota sparisce.
+export function creaSezione(progetto: Progetto, taskIds: string[], nome: string): Esito {
+  const pulito = nome.trim();
+  if (!pulito) return rifiutato("Il nome della sezione non può essere vuoto.");
+  const ids = new Set(taskIds);
+  if (ids.size === 0) return rifiutato("Scegli almeno una task da raggruppare.");
+  if ([...ids].some((id) => !progetto.task.some((t) => t.id === id))) return rifiutato("Una delle task non esiste più.");
+  const sezione: Sezione = { id: crypto.randomUUID(), nome: pulito };
+  const task = progetto.task.map((t) => (ids.has(t.id) ? { ...t, sezioneId: sezione.id } : t));
+  return { tipo: "ok", progetto: senzaSezioniVuote({ ...progetto, task, sezioni: [...progetto.sezioni, sezione] }) };
+}
+
+export function rinominaSezione(progetto: Progetto, sezioneId: string, nome: string): Esito {
+  const pulito = nome.trim();
+  if (!pulito) return rifiutato("Il nome della sezione non può essere vuoto.");
+  if (!progetto.sezioni.some((s) => s.id === sezioneId)) return rifiutato("La sezione non esiste più.");
+  return { tipo: "ok", progetto: { ...progetto, sezioni: progetto.sezioni.map((s) => (s.id === sezioneId ? { ...s, nome: pulito } : s)) } };
+}
+
+// Toglie la cornice e il nome: le task restano dove sono, fuori da ogni sezione.
+export function eliminaSezione(progetto: Progetto, sezioneId: string): Esito {
+  if (!progetto.sezioni.some((s) => s.id === sezioneId)) return rifiutato("La sezione non esiste più.");
+  const task = progetto.task.map((t) => {
+    if (t.sezioneId !== sezioneId) return t;
+    const { sezioneId: _, ...fuori } = t;
+    return fuori;
+  });
+  return { tipo: "ok", progetto: { ...progetto, task, sezioni: progetto.sezioni.filter((s) => s.id !== sezioneId) } };
+}
+
+export function taskDellaSezione(progetto: Progetto, sezioneId: string): Task[] {
+  return progetto.task.filter((t) => t.sezioneId === sezioneId);
 }
 
 // La posizione è disposizione, non contenuto: si cambia anche su una task fatta.
@@ -369,7 +422,9 @@ export function prioritaEffettive(progetto: Progetto): Map<string, PrioritaEffet
 // «Riordina»: dispone le task in colonne, ogni bloccante a sinistra delle task che blocca.
 // La colonna di una task è la catena più lunga di bloccanti prima di lei; dentro la colonna le task stanno
 // vicino alla media delle righe delle loro bloccanti, così le frecce si incrociano poco.
-// Dipende solo da task e dipendenze, non dalle posizioni di prima: riordinare due volte dà lo stesso risultato.
+// Ogni sezione ha una fascia di righe sua, una sotto l'altra nell'ordine del progetto, poi le task senza sezione:
+// le cornici non si sovrappongono e tra una fascia e l'altra resta una riga vuota per l'etichetta.
+// Dipende solo da task, dipendenze e sezioni, non dalle posizioni di prima: riordinare due volte dà lo stesso risultato.
 export function riordina(progetto: Progetto): Progetto {
   const colonna = new Map<string, number>();
   const colonnaDi = (taskId: string): number => {
@@ -379,25 +434,48 @@ export function riordina(progetto: Progetto): Progetto {
     colonna.set(taskId, calcolata);
     return calcolata;
   };
-  const colonne: Task[][] = [];
-  for (const t of progetto.task) (colonne[colonnaDi(t.id)] ??= []).push(t);
+  for (const t of progetto.task) colonnaDi(t.id);
+  const numeroColonne = Math.max(0, ...colonna.values()) + 1;
+
+  // Fasce: le sezioni esistenti in ordine, poi le task fuori da ogni sezione (o in una sezione che non c'è più).
+  const sezioni = new Set(progetto.sezioni.map((s) => s.id));
+  const fasciaDi = (t: Task) => (t.sezioneId && sezioni.has(t.sezioneId) ? t.sezioneId : "");
+  const fasce = [...progetto.sezioni.map((s) => s.id), ""]
+    .map((id) => ({ id, task: progetto.task.filter((t) => fasciaDi(t) === id) }))
+    .filter((f) => f.task.length > 0)
+    .map((f) => {
+      const colonne = Array.from({ length: numeroColonne }, (_, c) => f.task.filter((t) => colonna.get(t.id) === c));
+      return { ...f, colonne, righe: Math.max(...colonne.map((c) => c.length)) };
+    });
+  // Prima riga di ogni fascia; il tutto è centrato in verticale sullo zero, come senza sezioni.
+  const inizio: number[] = [];
+  let righe = 0;
+  for (const f of fasce) {
+    inizio.push(righe);
+    righe += f.righe + 1;
+  }
+  const centro = (righe - 2) / 2;
 
   const posizione = new Map<string, Posizione>();
-  colonne.forEach((task, c) => {
-    // Le bloccanti stanno nelle colonne precedenti, quindi hanno già la posizione.
-    const media = new Map(
-      task.map((t) => {
-        const altezze = bloccanti(progetto, t.id).map((b) => posizione.get(b.id)!.y);
-        return [t.id, altezze.length ? altezze.reduce((a, b) => a + b, 0) / altezze.length : 0];
-      }),
-    );
-    // sort è stabile: a parità di media resta l'ordine del progetto.
-    const ordinate = [...task].sort((a, b) => media.get(a.id)! - media.get(b.id)!);
-    ordinate.forEach((t, r) => {
-      // Colonne centrate in verticale sulla stessa linea.
-      posizione.set(t.id, { x: c * PASSO_COLONNE, y: (r - (ordinate.length - 1) / 2) * PASSO_RIGHE });
+  for (let c = 0; c < numeroColonne; c++) {
+    fasce.forEach((f, i) => {
+      const task = f.colonne[c];
+      // Le bloccanti stanno nelle colonne precedenti, quindi hanno già la posizione.
+      const media = new Map(
+        task.map((t) => {
+          const altezze = bloccanti(progetto, t.id).map((b) => posizione.get(b.id)!.y);
+          return [t.id, altezze.length ? altezze.reduce((a, b) => a + b, 0) / altezze.length : 0];
+        }),
+      );
+      // sort è stabile: a parità di media resta l'ordine del progetto.
+      const ordinate = [...task].sort((a, b) => media.get(a.id)! - media.get(b.id)!);
+      ordinate.forEach((t, r) => {
+        // Ogni colonna è centrata nella sua fascia.
+        const riga = inizio[i] + (f.righe - ordinate.length) / 2 + r;
+        posizione.set(t.id, { x: c * PASSO_COLONNE, y: (riga - centro) * PASSO_RIGHE });
+      });
     });
-  });
+  }
 
   return { ...progetto, task: progetto.task.map((t) => ({ ...t, posizione: posizione.get(t.id)! })) };
 }

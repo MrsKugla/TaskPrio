@@ -1133,3 +1133,76 @@ button.voce-task,
 .simbolo-rischi {
   color: var(--arancio-rischi);
 }
+
+/* Sezione: cornice intorno a un gruppo di task, con l'etichetta in alto a sinistra in maiuscoletto monospazio.
+   La cornice lascia passare i clic al grafo (si crea e si seleziona anche dentro); si afferra solo l'etichetta. */
+.react-flow__node-sezione {
+  pointer-events: none;
+}
+
+.sezione {
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--linea);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--linea) 5%, transparent);
+}
+
+.sezione-etichetta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--testo-tenue);
+  cursor: grab;
+  pointer-events: all;
+}
+
+.sezione-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sezione-campo {
+  width: 220px;
+  padding: 2px 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: none;
+}
+
+/* La × per togliere la sezione compare solo passandoci sopra: la cornice resta pulita. */
+button.sezione-elimina {
+  padding: 0 4px;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  opacity: 0;
+}
+
+.sezione-etichetta:hover .sezione-elimina,
+.sezione-elimina:focus-visible {
+  opacity: 1;
+}
+
+/* Barra «Raggruppa» sopra il grafo quando si scelgono più task. */
+.azioni-scelte {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  background: var(--superficie);
+  box-shadow: 0 4px 12px var(--ombra);
+}
+
+.conta-scelte {
+  font-family: var(--mono);
+  color: var(--testo-tenue);
+}
