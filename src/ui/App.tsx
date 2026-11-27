@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
@@ -21,6 +21,7 @@ import { BarraFiltri } from "./BarraFiltri";
 import { Grafo } from "./Grafo";
 import { Aggiornamento } from "./Aggiornamento";
 import { RegolaCrt } from "./RegolaCrt";
+import { Icona, STILE, Scelta, TERN, applicaSchermo, leggiSchermo, schermoIniziale, type Schermo } from "./schermo";
 import { Avviso, Conferma, ChiediTesto } from "./Dialoghi";
 import { Tendina } from "./Tendina";
 
@@ -35,30 +36,6 @@ type Dialogo =
 
 const FILTRO_BACKUP = [{ name: "Backup di TaskPrio", extensions: ["taskprio"] }];
 
-// Tema e CRT vivono nel database; la copia in localStorage serve solo a dipingere l'app giusta
-// prima che i dati arrivino, senza un lampo di tema chiaro o di CRT spento a ogni avvio.
-type Schermo = { tema: persistenza.Tema; crt: number };
-const CHIAVE_SCHERMO_RAPIDO = "schermo";
-const leggiSchermo = (dati: { tema?: string | null; crt?: number | null } | null): Schermo => ({
-  tema: dati?.tema === "scuro" ? "scuro" : "chiaro",
-  crt: Math.min(100, Math.max(0, Math.round(Number(dati?.crt) || 0))),
-});
-const schermoIniziale = (): Schermo => {
-  try {
-    return leggiSchermo(JSON.parse(localStorage.getItem(CHIAVE_SCHERMO_RAPIDO) ?? "null"));
-  } catch {
-    return leggiSchermo(null);
-  }
-};
-const applicaSchermo = ({ tema, crt }: Schermo) => {
-  const radice = document.documentElement;
-  radice.dataset.tema = tema;
-  // Con il CRT a 0 l'effetto non c'è proprio: niente strato sopra l'app né animazione.
-  if (crt > 0) radice.dataset.crt = "";
-  else delete radice.dataset.crt;
-  radice.style.setProperty("--crt", String(crt / 100));
-  localStorage.setItem(CHIAVE_SCHERMO_RAPIDO, JSON.stringify({ tema, crt }));
-};
 applicaSchermo(schermoIniziale());
 
 const oggi = () => {
@@ -90,6 +67,13 @@ export function App() {
   }, []);
 
   useEffect(() => applicaSchermo(schermo), [schermo]);
+
+  // Il foglio dello stile si carica all'avvio (main.tsx): se i dati salvati dicono un altro stile
+  // (localStorage svuotato, importazione di un backup) si ricarica con quello giusto.
+  // Con una finestra aperta si aspetta che si chiuda: dopo un'importazione dice dove sono i dati di prima.
+  useEffect(() => {
+    if (schermo.stile !== STILE && dialogo === null) location.reload();
+  }, [schermo.stile, dialogo]);
 
   // All'avvio e dopo un'importazione: tutto lo stato riparte dai dati salvati.
   const mostraDati = (dati: persistenza.DatiSalvati) => {
@@ -173,6 +157,15 @@ export function App() {
     persistenza.impostaTema(tema).catch(segnalaErrore);
   };
   const salvaCrt = () => persistenza.impostaCrt(schermo.crt).catch(segnalaErrore);
+  // Lo stile cambia tutta la pagina: si salva, poi la finestra si ricarica con l'altro foglio.
+  const cambiaStile = async (stile: persistenza.Stile) => {
+    try {
+      await persistenza.impostaStile(stile);
+      setSchermo((s) => ({ ...s, stile }));
+    } catch (e) {
+      segnalaErrore(e);
+    }
+  };
 
   const esporta = async () => {
     try {
@@ -224,34 +217,54 @@ export function App() {
 
   return (
     <div className="layout">
-      <nav className="menu">
-        <h1>TaskPrio</h1>
-        <button className={pagina === "home" ? "attiva" : ""} onClick={() => setPagina("home")}>
+      <nav className={`menu${TERN ? " t-island" : ""}`}>
+        {TERN ? (
+          <span className="t-brand">
+            <span className="t-mark">
+              <Icona nome="layers" />
+            </span>
+            TaskPrio
+          </span>
+        ) : (
+          <h1>TaskPrio</h1>
+        )}
+        <VoceMenu attiva={pagina === "home"} icona="home" onClick={() => setPagina("home")}>
           Home
-        </button>
-        <button className={pagina === "impostazioni" ? "attiva" : ""} onClick={() => setPagina("impostazioni")}>
+        </VoceMenu>
+        <VoceMenu attiva={pagina === "impostazioni"} icona="gear" onClick={() => setPagina("impostazioni")}>
           Impostazioni
-        </button>
-        <RegolaCrt valore={schermo.crt} onCambia={(crt) => setSchermo((s) => ({ ...s, crt }))} onSalva={salvaCrt} />
-        {versione && <span className="versione">v{versione}</span>}
+        </VoceMenu>
+        {/* Il CRT appartiene allo stile arcade. */}
+        {!TERN && <RegolaCrt valore={schermo.crt} onCambia={(crt) => setSchermo((s) => ({ ...s, crt }))} onSalva={salvaCrt} />}
+        {versione && <span className={`versione${TERN ? " t-count" : ""}`}>v{versione}</span>}
       </nav>
 
-      <main className="centro">
+      <main className={`centro${TERN ? " t-island" : ""}`}>
         <Aggiornamento />
         {errore && (
-          <div className="errore" role="alert">
-            {errore}
-            <button onClick={() => setErrore(null)} aria-label="Chiudi avviso">
-              ×
+          <div className="errore t-callout" data-tone="error" role="alert">
+            <Icona nome="warn" />
+            {TERN ? <span className="testo">{errore}</span> : errore}
+            <button className="t-btn icon sm quiet" onClick={() => setErrore(null)} aria-label="Chiudi avviso">
+              {TERN ? <Icona nome="x" /> : "×"}
             </button>
           </div>
         )}
 
         {pagina === "impostazioni" ? (
+          TERN ? (
+            <ImpostazioniTern
+              giorniPrestoAlta={giorniPrestoAlta}
+              onGiorni={cambiaGiorniPrestoAlta}
+              schermo={schermo}
+              onStile={cambiaStile}
+              onTema={cambiaTema}
+              onEsporta={esporta}
+              onImporta={scegliDaImportare}
+            />
+          ) : (
           <section className="impostazioni">
             <h2>Impostazioni</h2>
-            {/* Si salva all'uscita dal campo o con Invio, non a ogni tasto: scrivendo «20» passerebbe da «2»
-                e le presto alta più vecchie di 2 giorni diventerebbero alte per sempre. */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -260,27 +273,25 @@ export function App() {
             >
               <label>
                 Giorni prima che una presto alta diventi alta
-                <input
-                  // La key fa ripartire il campo quando il valore salvato arriva o cambia.
-                  key={giorniPrestoAlta}
-                  name="giorni"
-                  type="number"
-                  min={1}
-                  step={1}
-                  defaultValue={giorniPrestoAlta}
-                  onBlur={(e) => {
-                    const giorni = Number(e.target.value);
-                    if (Number.isInteger(giorni) && giorni >= 1 && giorni !== giorniPrestoAlta) cambiaGiorniPrestoAlta(giorni);
-                    // Un valore non valido non si salva: torna quello salvato.
-                    else e.target.value = String(giorniPrestoAlta);
-                  }}
-                />
+                <CampoGiorni giorni={giorniPrestoAlta} onCambia={cambiaGiorniPrestoAlta} />
               </label>
             </form>
             <p className="nota">
               Contati dalla creazione della task, se è ancora da fare. Il passaggio ad alta è definitivo: cambiare i giorni non
               lo annulla.
             </p>
+
+            <fieldset>
+              <legend>Stile</legend>
+              <label>
+                <input type="radio" name="stile" checked={schermo.stile === "arcade"} onChange={() => cambiaStile("arcade")} />
+                Arcade
+              </label>
+              <label>
+                <input type="radio" name="stile" checked={schermo.stile === "tern"} onChange={() => cambiaStile("tern")} />
+                Tern
+              </label>
+            </fieldset>
 
             <fieldset>
               <legend>Tema</legend>
@@ -304,12 +315,13 @@ export function App() {
               dati con quelli del file; prima salva da sola una copia dei dati attuali.
             </p>
           </section>
+          )
         ) : progetti === null ? (
-          <p className="vuoto">Caricamento…</p>
+          <p className={TERN ? "t-empty" : "vuoto"}>Caricamento…</p>
         ) : (
           <>
             <header className="barra">
-              <select
+              <Scelta
                 aria-label="Progetto"
                 value={attivo?.id ?? ""}
                 onChange={(e) => seleziona(e.target.value)}
@@ -321,12 +333,17 @@ export function App() {
                     {p.nome}
                   </option>
                 ))}
-              </select>
-              <button onClick={() => setDialogo({ tipo: "nuovo" })}>Nuovo</button>
-              <button disabled={!attivo} onClick={() => attivo && setDialogo({ tipo: "rinomina", progetto: attivo })}>
+              </Scelta>
+              <button className="t-btn" onClick={() => setDialogo({ tipo: "nuovo" })}>
+                <Icona nome="plus" />
+                Nuovo
+              </button>
+              <button className="t-btn" disabled={!attivo} onClick={() => attivo && setDialogo({ tipo: "rinomina", progetto: attivo })}>
+                <Icona nome="pen" />
                 Rinomina
               </button>
-              <button disabled={!attivo} onClick={() => attivo && setDialogo({ tipo: "elimina", progetto: attivo })}>
+              <button className="t-btn danger" disabled={!attivo} onClick={() => attivo && setDialogo({ tipo: "elimina", progetto: attivo })}>
+                <Icona nome="trash" />
                 Elimina
               </button>
             </header>
@@ -344,6 +361,20 @@ export function App() {
                   focusId={taskFocus?.id ?? null}
                 />
               </>
+            ) : TERN ? (
+              <div className="t-empty">
+                <span className="t-empty-ic">
+                  <Icona nome="folder" />
+                </span>
+                <p className="t-empty-title">Nessun progetto</p>
+                <p>Qui compare il grafo delle task del progetto scelto.</p>
+                <div className="t-empty-acts">
+                  <button className="t-btn primary" onClick={() => setDialogo({ tipo: "nuovo" })}>
+                    <Icona nome="plus" />
+                    Nuovo progetto
+                  </button>
+                </div>
+              </div>
             ) : (
               <p className="vuoto">Crea un progetto per iniziare.</p>
             )}
@@ -404,6 +435,7 @@ export function App() {
         <Conferma
           messaggio={`Eliminare il progetto «${dialogo.progetto.nome}» e tutte le sue task?`}
           etichettaConferma="Elimina"
+          pericolo
           onAnnulla={() => setDialogo(null)}
           onConferma={() => {
             elimina(dialogo.progetto);
@@ -412,5 +444,165 @@ export function App() {
         />
       )}
     </div>
+  );
+}
+
+// Voce del menu: tasto nello stile arcade, riga della barra laterale in tern.
+function VoceMenu(props: { attiva: boolean; icona: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      className={`t-nav-row${props.attiva ? " attiva" : ""}`}
+      aria-current={props.attiva ? "page" : undefined}
+      onClick={props.onClick}
+    >
+      <Icona nome={props.icona} />
+      {props.children}
+    </button>
+  );
+}
+
+// Si salva al «change» nativo, non a ogni tasto: scrivendo «20» passerebbe da «2» e le presto alta più vecchie
+// di 2 giorni diventerebbero alte per sempre. Il «change» nativo arriva all'uscita dal campo, con Invio (il modulo
+// toglie il fuoco) e dai bottoni meno e più del passo di tern-ui; l'onChange di React invece scatta a ogni tasto.
+function CampoGiorni({ id, giorni, onCambia }: { id?: string; giorni: number; onCambia: (giorni: number) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const conferma = useEffectEvent(() => {
+    const campo = ref.current!;
+    const nuovi = Number(campo.value);
+    if (Number.isInteger(nuovi) && nuovi >= 1 && nuovi !== giorni) onCambia(nuovi);
+    // Un valore non valido non si salva: torna quello salvato.
+    else campo.value = String(giorni);
+  });
+  useEffect(() => {
+    const campo = ref.current!;
+    const suChange = () => conferma();
+    campo.addEventListener("change", suChange);
+    return () => campo.removeEventListener("change", suChange);
+  }, []);
+  // Il campo resta lo stesso: quando il valore salvato arriva o cambia gli si riscrive il valore, così non perde
+  // il fuoco dopo un clic su meno o più e tern-ui riaccende o spegne quei bottoni ai limiti.
+  useEffect(() => {
+    const campo = ref.current!;
+    campo.value = String(giorni);
+    if (campo.parentElement) globalThis.TernUI?.aggiorna(campo.parentElement);
+  }, [giorni]);
+  return <input ref={ref} id={id} name="giorni" type="number" min={1} step={1} defaultValue={giorni} />;
+}
+
+// Impostazioni nello stile tern: righe di impostazioni di tern-ui (come le preferenze di Tern).
+function ImpostazioniTern(props: {
+  giorniPrestoAlta: number;
+  onGiorni: (giorni: number) => void;
+  schermo: Schermo;
+  onStile: (stile: persistenza.Stile) => void;
+  onTema: (tema: persistenza.Tema) => void;
+  onEsporta: () => void;
+  onImporta: () => void;
+}) {
+  const { schermo } = props;
+  return (
+    <section className="impostazioni">
+      <div className="t-doc">
+        <header className="t-page-head">
+          <h2 className="t-page-title">Impostazioni</h2>
+        </header>
+        <section>
+          <h3 className="t-sec">Priorità</h3>
+          <div className="t-rows">
+            <div className="t-set">
+              <div className="t-set-text">
+                <label htmlFor="giorni-presto-alta">Giorni prima che una presto alta diventi alta</label>
+                <p>Contati dalla creazione della task, se è ancora da fare. Il passaggio ad alta è definitivo: cambiare i giorni non lo annulla.</p>
+              </div>
+              <div className="t-set-ctl">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    (e.currentTarget.elements.namedItem("giorni") as HTMLInputElement).blur();
+                  }}
+                >
+                  <div className="t-step lg" role="group" aria-label="Giorni">
+                    <button type="button" data-step="down" aria-label="Diminuisci">
+                      <Icona nome="minus" />
+                    </button>
+                    <CampoGiorni id="giorni-presto-alta" giorni={props.giorniPrestoAlta} onCambia={props.onGiorni} />
+                    <button type="button" data-step="up" aria-label="Aumenta">
+                      <Icona nome="plus" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3 className="t-sec">Aspetto</h3>
+          <div className="t-rows">
+            <div className="t-set">
+              <div className="t-set-text">
+                <b>Stile</b>
+                <p>Arcade: tasti 3D ed effetto CRT. Tern: i componenti di tern-ui. Cambiando stile la finestra si ricarica.</p>
+              </div>
+              <div className="t-set-ctl">
+                <div className="t-seg lg" role="group" aria-label="Stile">
+                  <button aria-pressed={schermo.stile === "arcade"} onClick={() => props.onStile("arcade")}>
+                    Arcade
+                  </button>
+                  <button aria-pressed={schermo.stile === "tern"} onClick={() => props.onStile("tern")}>
+                    Tern
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="t-set">
+              <div className="t-set-text">
+                <b>Tema</b>
+              </div>
+              <div className="t-set-ctl">
+                <div className="t-seg lg" role="group" aria-label="Tema">
+                  <button aria-pressed={schermo.tema === "chiaro"} onClick={() => props.onTema("chiaro")}>
+                    <Icona nome="sun" />
+                    Chiaro
+                  </button>
+                  <button aria-pressed={schermo.tema === "scuro"} onClick={() => props.onTema("scuro")}>
+                    <Icona nome="moon" />
+                    Scuro
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h3 className="t-sec">Backup</h3>
+          <div className="t-rows">
+            <div className="t-set">
+              <div className="t-set-text">
+                <b>Esporta</b>
+                <p>Salva progetti, task e impostazioni in un unico file, da copiare su un altro PC.</p>
+              </div>
+              <div className="t-set-ctl">
+                <button className="t-btn lg raised" onClick={props.onEsporta}>
+                  <Icona nome="download" />
+                  Esporta…
+                </button>
+              </div>
+            </div>
+            <div className="t-set">
+              <div className="t-set-text">
+                <b>Importa</b>
+                <p>Sostituisce tutti i dati con quelli del file; prima salva da sola una copia dei dati attuali.</p>
+              </div>
+              <div className="t-set-ctl">
+                <button className="t-btn lg raised" onClick={props.onImporta}>
+                  <Icona nome="upload" />
+                  Importa…
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
   );
 }

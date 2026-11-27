@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Background,
+  BackgroundVariant,
   Controls,
   MarkerType,
   Panel,
@@ -26,6 +28,7 @@ import {
 } from "../regole";
 import { Avviso, Conferma } from "./Dialoghi";
 import { NodoTask } from "./NodoTask";
+import { Icona, TERN } from "./schermo";
 
 type Props = {
   progetto: Progetto;
@@ -212,15 +215,19 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
         minZoom={0.1}
         fitView
       >
+        {/* Nello stile tern il grafo poggia sulla griglia a punti di tern-ui (--grid-dot); arcade resta a tinta unita. */}
+        {TERN && <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} />}
         <Controls showInteractive={false} />
         <Panel position="top-right">
           <button
+            className="t-btn raised"
             disabled={progetto.task.length === 0}
             title="Ricalcola da capo la disposizione: ogni task a destra delle task da cui dipende"
             onClick={() => {
               if (applica({ tipo: "ok", progetto: riordina(progetto) })) setDaAdattare(true);
             }}
           >
+            <Icona nome="refresh" />
             Riordina
           </button>
         </Panel>
@@ -233,6 +240,7 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
               : `Eliminare ${daEliminare.length} task: ${daEliminare.map((t) => `«${t.titolo}»`).join(", ")}?`
           }
           etichettaConferma="Elimina"
+          pericolo
           onAnnulla={() => setDaEliminare(null)}
           onConferma={() => {
             applica(daEliminare.reduce<Esito>((e, t) => (e.tipo === "ok" ? eliminaTask(e.progetto, t.id) : e), { tipo: "ok", progetto }));
@@ -261,6 +269,7 @@ function GrafoInterno({ progetto, effettive, applica, selezionataId, onSeleziona
           }}
         >
           <input
+            className="t-input"
             autoFocus
             aria-label="Titolo della task"
             placeholder="Titolo della task"

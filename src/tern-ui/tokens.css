@@ -1,0 +1,364 @@
+/*
+  tern-ui · token
+  Valori presi dai fogli di stile di Tern 0.9.34 (theme.css, themes.css, surface.css, board.css,
+  highlight.css, motion.css). Dove Tern dà un nome a un valore, il nome è lo stesso, così un nuovo
+  estratto si confronta riga per riga. Le scale che Tern scrive a mano dentro i componenti
+  (altezze, durate, livelli, ruoli del testo) qui hanno un nome mio: sono segnate con «scala».
+  Chiaro e scuro con light-dark(): il tema segue il sistema, oppure <html data-theme="light|dark"> lo fissa.
+*/
+
+:root {
+	color-scheme: light dark;
+
+	/* ---------- Superfici, dal fondo verso l'alto ---------- */
+	--page: light-dark(#efefec, #08080a); /* il tavolo: carta calda, quasi nero */
+	--panel: light-dark(#fbfbfa, #0f0f12); /* isole e colonne */
+	--card: light-dark(#ffffff, #161619); /* fogli, righe raggruppate, controlli in rilievo */
+	--raise: light-dark(
+		#f4f4f2,
+		#1d1d21
+	); /* barre laterali nel chiaro, controlli in rilievo nello scuro */
+	--code-bg: light-dark(#f8f8f6, #0c0c0d);
+	--tbl-head: light-dark(#fafaf9, #111113);
+	--well: light-dark(rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.035)); /* incavo dei campi */
+	--well-line: light-dark(rgba(27, 28, 48, 0.065), rgba(255, 255, 255, 0.075));
+	--chip-bg: light-dark(
+		rgba(27, 28, 48, 0.055),
+		rgba(255, 255, 255, 0.07)
+	); /* bottoni piatti e chip */
+	--card-bg: light-dark(
+		rgba(255, 255, 255, 0.55),
+		rgba(255, 255, 255, 0.028)
+	); /* card semitrasparente */
+	--shade: light-dark(
+		color-mix(in srgb, var(--t1) 2.8%, transparent),
+		color-mix(in srgb, var(--t1) 3%, transparent)
+	);
+	--topbar-bg: light-dark(rgba(239, 239, 236, 0.72), rgba(0, 0, 0, 0.56));
+	--grid-dot: light-dark(rgba(40, 50, 90, 0.1), rgba(255, 255, 255, 0.065));
+
+	/* ---------- Linee: l'inchiostro blu-notte in trasparenza, mai grigi pieni ---------- */
+	--l1: light-dark(
+		rgba(24, 26, 44, 0.06),
+		rgba(255, 255, 255, 0.07)
+	); /* divisori interni, fondi al passaggio */
+	--l2: light-dark(
+		rgba(24, 26, 44, 0.09),
+		rgba(255, 255, 255, 0.1)
+	); /* contorno di ogni controllo e card */
+	--l3: light-dark(
+		rgba(24, 26, 44, 0.14),
+		rgba(255, 255, 255, 0.15)
+	); /* contorno al passaggio, scrollbar */
+	--l4: light-dark(rgba(24, 26, 44, 0.22), rgba(255, 255, 255, 0.24)); /* caselle vuote, tacche */
+
+	/* ---------- Inchiostro ---------- */
+	--t1: light-dark(#1b1c20, #ededed); /* testo da leggere */
+	--t2: light-dark(#55575f, #a1a1a1); /* secondario, bottoni a riposo */
+	--t3: light-dark(#6a6c74, #8a8a92); /* etichette, orari, icone */
+	--t4: light-dark(#b3b5bb, #55555c); /* solo decorazione: separatori, frecce, disattivato */
+	--ink: light-dark(#1b1c20, #ededed);
+	--ink2: light-dark(rgba(27, 28, 32, 0.66), rgba(237, 237, 237, 0.7));
+	--ink3: light-dark(rgba(27, 28, 32, 0.44), rgba(237, 237, 237, 0.42));
+	--ink4: light-dark(rgba(27, 28, 32, 0.14), rgba(237, 237, 237, 0.14));
+
+	/* ---------- Accento ---------- */
+	--a1: #44cfff;
+	--a2: #3b6cff;
+	--grad: linear-gradient(
+		135deg,
+		var(--a1),
+		var(--a2)
+	); /* solo: bottone primario, marchio, barra della riga scelta nei pannelli di vetro */
+	--grad-ink: #05070b;
+	--accent: light-dark(#3d6fff, #5a8cff); /* anelli, selezione, link, piccoli segni */
+	--accent-ink: light-dark(
+		#2448c4,
+		#9dbcff
+	); /* testo d'accento: l'accento puro non regge il contrasto */
+	--accent-fill: light-dark(
+		#2f63f0,
+		#2a5fe0
+	); /* fondo pieno con testo bianco: caselle, interruttori, pallini */
+	accent-color: var(--accent);
+
+	/* ---------- Stati ---------- */
+	--ok: light-dark(#2fae74, #3ecf8e);
+	--warn: light-dark(#d98a0b, #f5a524);
+	--bad: light-dark(#e5484d, #ff6166);
+	--live: #a86af4; /* in corso */
+	--info: light-dark(#0e89a8, #35c7e6);
+	--muted: light-dark(#64666e, #939393);
+	--neutral: light-dark(#181a2c, #fff);
+	--num: light-dark(
+		#a65700,
+		#f5b54a
+	); /* numeri in evidenza dentro il testo (Tern: #b25e00, 4,4:1 sul fondo del codice) */
+	--ok-fill: light-dark(#167a4d, #137348);
+	--bad-fill: light-dark(#bf3038, #b52c35);
+	--live-fill: light-dark(#7540bd, #6d37b5);
+	--find: rgba(245, 177, 61, 0.35); /* riscontro di una ricerca */
+	--find-ring: rgba(245, 177, 61, 0.9);
+
+	/* Tern scrive i toni puri anche come testo; nel chiaro giallo e rosso scendono sotto 4,5:1.
+	   Questi sono gli stessi toni scuriti quanto basta per il testo piccolo (scala). */
+	--ok-ink: light-dark(color-mix(in oklab, var(--ok) 62%, #000), var(--ok));
+	--warn-ink: light-dark(color-mix(in oklab, var(--warn) 62%, #000), var(--warn));
+	--bad-ink: light-dark(color-mix(in oklab, var(--bad) 72%, #000), var(--bad));
+	--live-ink: light-dark(color-mix(in oklab, var(--live) 68%, #000), var(--live));
+	--info-ink: light-dark(color-mix(in oklab, var(--info) 78%, #000), var(--info));
+
+	/* ---------- Raggi ---------- */
+	--r-chip: 6px; /* chip, bottoni piccoli, voci di menu */
+	--r-ctl: 8px; /* bottoni, campi, righe */
+	--r-card: 12px; /* card, menu, isole */
+	--r-panel: 16px; /* finestre modali, palette dei comandi */
+	/* I raggi si annidano togliendo il margine interno: 9 dentro 2 → 7, 12 dentro 6 → 6, 11 dentro 3 → 8 */
+
+	/* ---------- Caratteri ---------- */
+	--sans: 'Geist', -apple-system, 'SF Pro Text', system-ui, sans-serif;
+	--mono: 'Ioskeley Mono Term', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+	/* Ruoli del testo (scala). Uso: font: var(--text-label). Pesi: 400 leggere, 500 controlli, 550 titoli piccoli, 600 titoli. */
+	--text-display: 600 40px/1.12 var(--sans); /* titolo di un documento */
+	--text-page: 600 28px/1.15 var(--sans); /* titolo di una pagina di impostazioni */
+	--text-h2: 600 22px/1.3 var(--sans);
+	--text-h3: 600 16.5px/1.4 var(--sans);
+	--text-title: 550 15px/1.3 var(--sans); /* titolo di pannello, di finestra, di stato vuoto */
+	--text-body: 400 14px/1.5 var(--sans);
+	--text-ui: 400 13px/18px var(--sans); /* righe, menu, campi */
+	--text-label: 500 12.5px/16px var(--sans); /* bottoni, etichette di campo, intestazioni di sezione */
+	--text-small: 400 12px/16px var(--sans); /* note, descrizioni */
+	--text-meta: 500 11.5px/16px var(--sans); /* intestazioni di tabella e di gruppo */
+	--text-micro: 500 11px/1 var(--sans); /* chip e badge */
+	--text-code: 400 12px/17px var(--mono);
+	--text-figure: 400 11.5px/1 var(--mono); /* contatori, orari, misure: sempre tabular-nums */
+	/* Spaziatura delle lettere: più stretta man mano che il corpo cresce; il mono resta a 0 */
+	--track: -0.003em; /* fino a 13.5px */
+	--track-title: -0.014em; /* 14–16px in peso 550–600 */
+	--track-h2: -0.02em;
+	--track-page: -0.028em;
+	--track-display: -0.032em;
+
+	/* ---------- Misure dei controlli (scala) ---------- */
+	--h-sm: 22px; /* bottone piccolo, righe fitte */
+	--h-md: 28px; /* bottone, campo, voce di menu */
+	--h-lg: 32px; /* bottone e campo nelle pagine di impostazioni e nelle finestre */
+	--h-head: 30px; /* testata di pannello */
+	--gap-xs: 2px;
+	--gap-sm: 6px;
+	--gap-md: 10px;
+	--gap-lg: 16px;
+	--block-gap: 16px; /* tra blocchi di contenuto */
+	--inner-gap: 8px; /* dentro una card */
+	--island-r: 12px; /* isole della finestra */
+	--island-gap: 4px;
+
+	/* ---------- Movimento ---------- */
+	--ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* cambi di stato */
+	--out: cubic-bezier(0.16, 1, 0.3, 1); /* entrate, rilasci, cose che arrivano */
+	/* Tern scrive spring(0.35s, 0.15) per pomelli e cursori; nei browser non esiste: questa è la stessa molla campionata */
+	--spring: linear(
+		0,
+		0.036,
+		0.121,
+		0.231,
+		0.35,
+		0.465,
+		0.57,
+		0.663,
+		0.742,
+		0.807,
+		0.86,
+		0.901,
+		0.933,
+		0.957,
+		0.974,
+		0.986,
+		0.995,
+		1,
+		1.004,
+		1.006,
+		1.006,
+		1.006,
+		1.005,
+		1.004,
+		1.003,
+		1.002,
+		1
+	);
+	--dur-spring: 0.45s;
+	/* Durate (scala). Il passaggio del mouse entra a 0s ed esce in --dur-state. */
+	--dur-press: 0.1s; /* schiacciare: scale(0.97) con --out */
+	--dur-state: 0.15s; /* colore, fondo, ombra: con --ease */
+	--dur-turn: 0.2s; /* frecce che ruotano, spunte che compaiono */
+	--dur-pop: 0.22s; /* menu e popover: scale(0.97) translateY(-3px), con --out */
+	--dur-release: 0.3s; /* ritorno dopo lo schiacciamento, pieghe che si aprono, entrate di righe */
+	--dur-modal: 0.34s; /* finestre: translateY(10px) scale(0.97) */
+	--dur-exit: 0.11s; /* le uscite sono sempre più brevi delle entrate, e solo in dissolvenza */
+
+	/* ---------- Profondità ---------- */
+	/* Ogni contorno è un anello di box-shadow, mai un border. Nel chiaro l'altezza è un'ombra corta sotto;
+	   nello scuro le ombre non si vedono, quindi l'altezza è un filo di luce in alto. */
+	--hi: inset 0 1px 0 light-dark(transparent, rgba(255, 255, 255, 0.05)); /* controllo in rilievo, scuro */
+	--hi-on: inset 0 1px 0 light-dark(transparent, rgba(255, 255, 255, 0.08)); /* scheda scelta, scuro */
+	--lift-card: 0 1px 2px light-dark(rgba(0, 0, 0, 0.03), transparent);
+	--lift-ctl: 0 1px 2px light-dark(rgba(0, 0, 0, 0.05), transparent);
+	--lift-thumb: 0 1px 2px light-dark(rgba(0, 0, 0, 0.08), transparent);
+	--island-shadow:
+		0 0 0 1px light-dark(var(--l1), var(--l2)),
+		0 16px 36px -24px light-dark(rgba(0, 0, 0, 0.45), transparent);
+	--sel-ring:
+		0 0 0 1px var(--accent), 0 0 0 4px rgb(from var(--accent) r g b / 18%); /* fuoco da tastiera */
+	--field-ring:
+		inset 0 0 0 1px rgb(from var(--accent) r g b / 55%),
+		0 0 0 3px rgb(from var(--accent) r g b / 13%); /* campo in scrittura */
+	--field-bad:
+		inset 0 0 0 1px rgb(from var(--bad) r g b / 70%), 0 0 0 3px rgb(from var(--bad) r g b / 14%);
+	--sel: light-dark(
+		rgb(from var(--accent) r g b / 10%),
+		rgb(from var(--accent) r g b / 16%)
+	); /* fondo della riga scelta */
+
+	/* Board */
+	--bd-lane: light-dark(
+		color-mix(in srgb, var(--t1) 3.5%, transparent),
+		color-mix(in srgb, var(--t1) 2.5%, transparent)
+	);
+	--bd-card: light-dark(var(--card), color-mix(in srgb, var(--t1) 6%, transparent));
+	--bd-card-hover: light-dark(var(--card), color-mix(in srgb, var(--t1) 9%, transparent));
+	--bd-card-press: light-dark(
+		color-mix(in srgb, var(--card), var(--t1) 3%),
+		color-mix(in srgb, var(--t1) 11%, transparent)
+	);
+	--bd-ring: light-dark(var(--l2), var(--l1));
+	--bd-shadow: 0 1px 2px light-dark(rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.28));
+	--bd-shadow-hover:
+		0 1px 2px light-dark(rgba(0, 0, 0, 0.07), rgba(0, 0, 0, 0.3)),
+		0 8px 16px -10px light-dark(rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.55));
+
+	/* ---------- Vetro: menu, popover, suggerimenti, finestre ---------- */
+	--glass-hi: light-dark(#fff, rgba(255, 255, 255, 0.05)); /* filo di luce sul bordo alto */
+	--pop-bg: light-dark(rgba(255, 255, 255, 0.82), rgba(35, 35, 39, 0.98));
+	--pop-filter: blur(24px) saturate(180%);
+	--pop-shadow:
+		0 0 0 1px light-dark(var(--l2), var(--l3)), inset 0 1px 0 var(--glass-hi),
+		0 1px 2px light-dark(rgb(0 0 0 / 7%), rgb(0 0 0 / 40%)),
+		0 12px 28px -10px light-dark(rgb(0 0 0 / 22%), rgb(0 0 0 / 60%));
+	--modal-bg: var(--pop-bg);
+	--modal-filter: blur(32px) saturate(190%);
+	--modal-shadow:
+		0 0 0 1px light-dark(var(--l2), var(--l3)), inset 0 1px 0 var(--glass-hi),
+		0 2px 5px light-dark(rgb(0 0 0 / 7%), rgb(0 0 0 / 40%)),
+		0 24px 56px -20px light-dark(rgb(0 0 0 / 28%), rgb(0 0 0 / 65%));
+	/* Finestra che chiede una decisione: ombra lunga più un alone del colore dell'azione */
+	--dialog-shadow:
+		0 0 0 1px light-dark(var(--l2), var(--l3)), inset 0 1px 0 var(--glass-hi),
+		0 40px 100px -24px light-dark(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.65)),
+		0 0 120px -40px light-dark(rgb(from var(--bloom, var(--accent)) r g b / 35%), transparent);
+	--dim: light-dark(
+		rgba(244, 244, 241, 0.5),
+		rgba(0, 0, 0, 0.55)
+	); /* velo dietro una finestra: carta, non nero */
+	--dim-filter: blur(3px);
+
+	/* Livelli (scala): gli stessi numeri di Tern */
+	--z-raise: 2;
+	--z-sticky: 20;
+	--z-bar: 30;
+	--z-menu: 40;
+	--z-modal: 90;
+	--z-pop: 95;
+	--z-toast: 99;
+	--z-tip: 1000;
+
+	/* ---------- Colori del codice (highlight.css) ---------- */
+	--tk-comment: var(--t3);
+	--tk-doc: light-dark(#35726b, #7bb9b0);
+	--tk-keyword: light-dark(#8a3fd6, #c29bff);
+	--tk-function: light-dark(#2448c4, #8fb6ff);
+	--tk-macro: light-dark(#a52a9a, #f08ade);
+	--tk-variable: var(--t1);
+	--tk-property: light-dark(#325a86, #a8d1ee);
+	--tk-string: light-dark(#1d7f52, #5fd39c);
+	--tk-escape: light-dark(#055c3e, #a0f8c5);
+	--tk-number: light-dark(#a65700, #f5b54a);
+	--tk-constant: light-dark(#737007, #e0da69);
+	--tk-type: light-dark(#0b7894, #4fd2ee);
+	--tk-tag: light-dark(#b63b32, #f8907f);
+	--tk-heading: light-dark(#6744c5, #b6a5fd);
+	--tk-link: light-dark(#0070a6, #6fc1f6);
+	--tk-operator: light-dark(#c2335f, #ff8db2);
+	--tk-punct: var(--t2);
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+}
+:root[data-theme='dark'] {
+	color-scheme: dark;
+	--modal-filter: none; /* nello scuro il vetro è già quasi pieno */
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--modal-filter: none;
+	}
+}
+
+/* ---------- Toni: data-tone imposta --tc (colore pieno: fondi, anelli, icone) e --ti (testo) ---------- */
+[data-tone='neutral'] {
+	--tc: var(--neutral);
+	--ti: var(--t2);
+}
+[data-tone='accent'] {
+	--tc: var(--accent);
+	--ti: var(--accent-ink);
+}
+[data-tone='info'] {
+	--tc: var(--info);
+	--ti: var(--info-ink);
+}
+[data-tone='success'] {
+	--tc: var(--ok);
+	--ti: var(--ok-ink);
+}
+[data-tone='warning'] {
+	--tc: var(--warn);
+	--ti: var(--warn-ink);
+}
+[data-tone='error'] {
+	--tc: var(--bad);
+	--ti: var(--bad-ink);
+}
+[data-tone='pending'] {
+	--tc: var(--live);
+	--ti: var(--live-ink);
+}
+[data-tone='muted'] {
+	--tc: var(--muted);
+	--ti: var(--t2);
+}
+
+/* ---------- Preferenze di sistema (motion.css) ---------- */
+@media (prefers-reduced-transparency: reduce) {
+	:root {
+		--pop-bg: light-dark(#fff, #232327);
+		--topbar-bg: var(--page);
+		--card-bg: var(--card);
+		--well: var(--card);
+		--pop-filter: none;
+		--modal-filter: none;
+		--dim-filter: none;
+	}
+}
+@media (prefers-contrast: more) {
+	:root {
+		--t1: light-dark(#000, #fff);
+		--t2: light-dark(#303030, #ddd);
+		--t3: light-dark(#505050, #bbb);
+		--t4: light-dark(#606060, #aaa);
+		--l1: light-dark(rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.3));
+		--l2: light-dark(rgba(0, 0, 0, 0.45), rgba(255, 255, 255, 0.4));
+		--l3: light-dark(rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.55));
+	}
+}

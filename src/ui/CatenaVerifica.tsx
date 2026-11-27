@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Background,
+  BackgroundVariant,
   Controls,
   Handle,
   MarkerType,
@@ -37,8 +39,9 @@ import {
   type Task,
   type Test,
 } from "../regole";
-import { ETICHETTE_ESITO } from "./aspetto";
+import { ETICHETTE_ESITO, Etichetta } from "./aspetto";
 import { Conferma } from "./Dialoghi";
+import { Icona, Scelta, TERN } from "./schermo";
 
 type Props = {
   progetto: Progetto;
@@ -105,19 +108,20 @@ function NodoCatena({ data, selected }: NodeProps<NodoCatena>) {
         <span className="testo-titolo">{data.testo}</span>
         {taskCreata ? (
           <button
-            className="task-creata nodrag"
+            className="task-creata t-btn sm quiet nodrag"
             title={`Apri la task «${taskCreata.titolo}»`}
             onClick={(e) => {
               e.stopPropagation();
               onApri(taskCreata.id);
             }}
           >
-            → {taskCreata.titolo}
+            {TERN ? <Icona nome="arrow-right" /> : "→ "}
+            {TERN ? <span className="task-creata-testo">{taskCreata.titolo}</span> : taskCreata.titolo}
           </button>
         ) : (
           onCreaTask && (
             <button
-              className="crea-task nodrag"
+              className="crea-task t-btn sm nodrag"
               title="Crea una task alta che blocca la task di partenza"
               onClick={(e) => {
                 e.stopPropagation();
@@ -145,7 +149,7 @@ function NodoCatena({ data, selected }: NodeProps<NodoCatena>) {
       <span className="testo-titolo">{test.titolo}</span>
       <span className="esiti nodrag">
         <button
-          className={test.esito === "passato" ? "scelto" : ""}
+          className={`t-btn sm icon${test.esito === "passato" ? " scelto" : ""}`}
           disabled={solaLettura}
           aria-pressed={test.esito === "passato"}
           title="Passato"
@@ -154,10 +158,10 @@ function NodoCatena({ data, selected }: NodeProps<NodoCatena>) {
             scegli("passato");
           }}
         >
-          ✓
+          {TERN ? <Icona nome="check" /> : "✓"}
         </button>
         <button
-          className={test.esito === "fallito" ? "scelto" : ""}
+          className={`t-btn sm icon${test.esito === "fallito" ? " scelto" : ""}`}
           disabled={solaLettura}
           aria-pressed={test.esito === "fallito"}
           title="Fallito"
@@ -166,7 +170,7 @@ function NodoCatena({ data, selected }: NodeProps<NodoCatena>) {
             scegli("fallito");
           }}
         >
-          ✗
+          {TERN ? <Icona nome="x" /> : "✗"}
         </button>
       </span>
       <Handle
@@ -187,9 +191,10 @@ const tipiNodo = { catena: NodoCatena };
 function CampoTitolo(props: { etichetta: string; valore: string; onSalva: (titolo: string) => void }) {
   const [testo, setTesto] = useState(props.valore);
   return (
-    <label>
-      {props.etichetta}
+    <label className="t-field">
+      <Etichetta>{props.etichetta}</Etichetta>
       <input
+        className="t-input"
         value={testo}
         onChange={(e) => {
           setTesto(e.target.value);
@@ -212,8 +217,9 @@ function Aggiungi(props: { segnaposto: string; onAggiungi: (titolo: string) => b
         if (props.onAggiungi(testo)) setTesto("");
       }}
     >
-      <input aria-label={props.segnaposto} placeholder={props.segnaposto} value={testo} onChange={(e) => setTesto(e.target.value)} />
-      <button type="submit" disabled={!testo.trim()}>
+      <input className="t-input" aria-label={props.segnaposto} placeholder={props.segnaposto} value={testo} onChange={(e) => setTesto(e.target.value)} />
+      <button className="t-btn" type="submit" disabled={!testo.trim()}>
+        <Icona nome="plus" />
         Aggiungi
       </button>
     </form>
@@ -239,9 +245,10 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
           valore={rischio.titolo}
           onSalva={(titolo) => applica(modificaRischio(progetto, task.id, rischio.id, { titolo }))}
         />
-        <label>
-          Descrizione
+        <label className="t-field">
+          <Etichetta>Descrizione</Etichetta>
           <textarea
+            className="t-textarea"
             rows={3}
             value={rischio.descrizione}
             onChange={(e) => applica(modificaRischio(progetto, task.id, rischio.id, { descrizione: e.target.value }))}
@@ -250,7 +257,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
         <Aggiungi segnaposto="Nuovo test" onAggiungi={(titolo) => applica(aggiungiTest(progetto, task.id, rischio.id, { titolo }))} />
         <button
           type="button"
-          className="pericolo"
+          className="pericolo t-btn danger"
           onClick={() =>
             setDaEliminare({
               messaggio: `Eliminare il rischio «${rischio.titolo}» e i suoi test?`,
@@ -258,6 +265,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
             })
           }
         >
+          <Icona nome="trash" />
           Elimina rischio
         </button>
       </>
@@ -271,7 +279,12 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
           valore={test.pianoB.testo}
           onSalva={(testo) => applica(impostaPianoB(progetto, task.id, test.id, { tipo: "azione", testo }))}
         />
-        <button type="button" className="pericolo" onClick={() => applica(rimuoviPianoB(progetto, task.id, test.id)) && onSeleziona(null)}>
+        <button
+          type="button"
+          className="pericolo t-btn danger"
+          onClick={() => applica(rimuoviPianoB(progetto, task.id, test.id)) && onSeleziona(null)}
+        >
+          <Icona nome="trash" />
           Togli piano B
         </button>
       </>
@@ -287,18 +300,24 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
           valore={test.titolo}
           onSalva={(titolo) => applica(modificaTest(progetto, task.id, test.id, { titolo }))}
         />
-        <fieldset>
-          <legend>Esito</legend>
+        <fieldset className="esito-test">
+          <legend className="t-sec">Esito</legend>
           {ESITI.map((e) => (
-            <label key={e} className="scelta">
-              <input type="radio" name="esito" checked={test.esito === e} onChange={() => applica(impostaEsito(progetto, task.id, test.id, e))} />
+            <label key={e} className="scelta t-opt">
+              <input
+                className="t-radio"
+                type="radio"
+                name="esito"
+                checked={test.esito === e}
+                onChange={() => applica(impostaEsito(progetto, task.id, test.id, e))}
+              />
               {ETICHETTE_ESITO[e]}
             </label>
           ))}
         </fieldset>
-        <label>
-          Piano B
-          <select
+        <label className="t-field">
+          <Etichetta>Piano B</Etichetta>
+          <Scelta
             value={piano ? (piano.tipo === "test" ? piano.testId : "azione") : ""}
             onChange={(e) => {
               const valore = e.target.value;
@@ -318,7 +337,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
                 Test: {t.titolo}
               </option>
             ))}
-          </select>
+          </Scelta>
         </label>
         {piano?.tipo === "azione" && (
           <CampoTitolo
@@ -330,11 +349,12 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
         )}
         <button
           type="button"
-          className="pericolo"
+          className="pericolo t-btn danger"
           onClick={() =>
             setDaEliminare({ messaggio: `Eliminare il test «${test.titolo}»?`, esito: () => eliminaTest(progetto, task.id, test.id) })
           }
         >
+          <Icona nome="trash" />
           Elimina test
         </button>
       </>
@@ -343,7 +363,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
     contenuto = (
       <>
         <Aggiungi segnaposto="Nuovo rischio" onAggiungi={(titolo) => applica(aggiungiRischio(progetto, task.id, { titolo }))} />
-        <p className="vuoto-piccolo">
+        <p className="vuoto-piccolo t-note">
           Clic su un nodo per modificarlo; ✓ e ✗ sul test ne segnano l'esito. Trascina dal pallino di un test su un altro test dello
           stesso rischio per farne il piano B.
         </p>
@@ -358,6 +378,7 @@ function Dettaglio(props: Props & { selezione: RifNodo | null; onSeleziona: (rif
         <Conferma
           messaggio={daEliminare.messaggio}
           etichettaConferma="Elimina"
+          pericolo
           onAnnulla={() => setDaEliminare(null)}
           onConferma={() => {
             setDaEliminare(null);
@@ -534,9 +555,15 @@ function GrafoCatena(
         fitView
         fitViewOptions={{ maxZoom: 1 }}
       >
+        {TERN && <Background variant={BackgroundVariant.Dots} gap={16} size={1} />}
         <Controls showInteractive={false} />
         <Panel position="top-right">
-          <button onClick={onSchermoIntero} title={schermoIntero ? "Torna alla tendina (Esc)" : "Allarga a tutto schermo"}>
+          <button
+            className="t-btn sm raised"
+            onClick={onSchermoIntero}
+            title={schermoIntero ? "Torna alla tendina (Esc)" : "Allarga a tutto schermo"}
+          >
+            <Icona nome={schermoIntero ? "shrink" : "expand"} />
             {schermoIntero ? "Riduci" : "Tutto schermo"}
           </button>
         </Panel>
@@ -563,7 +590,7 @@ export function CatenaVerifica(props: Props) {
 
   return (
     <section className={`catena${schermoIntero ? " a-tutto-schermo" : ""}`} aria-label="Catena di verifica">
-      <h3>Catena di verifica</h3>
+      <h3 className="t-sec">Catena di verifica</h3>
       {/* La key rimonta il grafo al cambio di dimensione, così si inquadra di nuovo. */}
       <ReactFlowProvider key={schermoIntero ? "grande" : "piccolo"}>
         <GrafoCatena

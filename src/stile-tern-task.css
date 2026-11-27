@@ -1,0 +1,812 @@
+/* Stile «tern» delle parti delle task: grafo, nodi, filtri, tendina, catena di verifica.
+   Solo token e regole di tern-ui (src/tern-ui/README.md). Dove tern-ui non ha il pezzo (nodi del grafo, colori della
+   priorità, maniglia della tendina, catena) è composto dai suoi token: niente colori scritti qui. */
+
+/* ---------- Colori della priorità: toni di stato di tern-ui ---------- */
+/* Alta = errore, presto alta = attenzione, media = info, bassa = riuscito. «In corso» (--live) e l'accento
+   (selezione) restano liberi per lo stato della task e per la scelta. */
+.priorita-alta {
+  --priorita: var(--bad);
+}
+
+.priorita-prestoAlta {
+  --priorita: var(--warn);
+}
+
+.priorita-media {
+  --priorita: var(--info);
+}
+
+.priorita-bassa {
+  --priorita: var(--ok);
+}
+
+/* Campione della priorità: il pallino di tern-ui (t-dot) col colore della priorità, anche dentro un chip. */
+.campione {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--priorita);
+}
+
+/* ---------- Grafi (React Flow) ---------- */
+/* I grafi seguono il tema dell'app: React Flow di suo usa «light dark», e i token light-dark() si risolvono qui. */
+.react-flow {
+  color-scheme: inherit;
+  --xy-background-color: transparent;
+  --xy-background-pattern-color: var(--grid-dot);
+  --xy-edge-stroke: var(--t4);
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-stroke-selected: var(--accent);
+  --xy-connectionline-stroke: var(--accent);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-edge-label-background-color: var(--panel);
+  --xy-edge-label-color: var(--t3);
+  --xy-attribution-background-color: transparent;
+  --xy-selection-background-color: var(--sel);
+  --xy-selection-border: 1px solid rgb(from var(--accent) r g b / 45%);
+}
+
+.react-flow__attribution a {
+  color: var(--t4);
+}
+
+.react-flow__edge-text {
+  font: var(--text-micro);
+}
+
+/* La cornice di React Flow riceve il fuoco da tastiera: l'anello prende il raggio della card che contiene. */
+.react-flow__node {
+  border-radius: 9px;
+}
+
+/* Zoom e «adatta»: la barra degli strumenti di tern-ui (.t-btns.toolbar), in colonna e in rilievo sul grafo. */
+.react-flow__controls {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: light-dark(var(--card), var(--raise));
+  box-shadow:
+    0 0 0 1px var(--l2),
+    var(--lift-ctl),
+    var(--hi);
+}
+
+.react-flow .react-flow__controls-button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-chip);
+  color: var(--t3);
+  background: transparent;
+  transition:
+    background-color var(--dur-state) var(--ease),
+    color var(--dur-state) var(--ease);
+}
+
+.react-flow .react-flow__controls-button:hover {
+  color: var(--t1);
+  background: var(--l2);
+  transition: none;
+}
+
+.react-flow .react-flow__controls-button:active {
+  background: var(--l3);
+}
+
+.react-flow .react-flow__controls-button svg {
+  max-width: 11px;
+  max-height: 11px;
+  fill: currentcolor;
+}
+
+/* Frecce delle dipendenze: tratteggio che scorre verso la punta, dalla task che dipende a quella da cui dipende. */
+.grafo .react-flow__edge-path {
+  stroke-dasharray: 6 5;
+  animation: freccia-scorre 900ms linear infinite;
+}
+
+@keyframes freccia-scorre {
+  to {
+    stroke-dashoffset: -11;
+  }
+}
+
+/* Freccia selezionata (quella che Canc elimina): si ferma e prende l'accento. */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--accent);
+  stroke-width: 2;
+  animation: none;
+}
+
+/* Con «riduci il movimento» di Windows tern-ui ferma tutte le animazioni (base.css). Le frecce che scorrono e la task
+   in corso che pulsa però dicono qualcosa (il verso della dipendenza, cosa è in corso, il piano B da eseguire):
+   loro si muovono comunque. Selettori più specifici di «*», con lo stesso !important di tern-ui: vincono. */
+@media (prefers-reduced-motion: reduce) {
+  .grafo .react-flow__edge-path {
+    animation-duration: 900ms !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .grafo-catena .react-flow__edge.animated .react-flow__edge-path {
+    animation-duration: 0.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .nodo-task.stato-inCorso::before {
+    animation-duration: 1.1s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+/* ---------- Grafo delle task ---------- */
+.grafo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Campo del titolo della task nuova, dove si è fatto doppio clic. */
+.bozza-task {
+  position: absolute;
+  z-index: var(--z-menu);
+  width: 220px;
+}
+
+.bozza-task .t-input {
+  width: 100%;
+  box-shadow: var(--field-ring), var(--pop-shadow);
+}
+
+/* Nodo: come i bottoni del plugin Script Buttons di Tern (custom-script-buttons/host.luau e styles.css):
+   fondo del colore al 22%, filo pieno di 2px dello stesso colore, raggio 8. Qui il colore è la priorità.
+   Larghezza massima e titolo su due righe: devono stare in INGOMBRO_TASK (src/regole). */
+.nodo-task {
+  --riempimento: 22%;
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: var(--r-ctl);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--t1);
+  box-shadow: inset 0 0 0 2px var(--priorita);
+  cursor: pointer;
+}
+
+/* Il fondo sta su uno strato a parte, sotto il testo: in corso pulsa solo lui, come il rettangolo del bottone. */
+.nodo-task::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgb(from var(--priorita) r g b / var(--riempimento));
+}
+
+/* Passaggio e clic: un velo d'inchiostro, come .csb-hit del plugin. */
+.nodo-task:hover::after,
+.nodo-task:active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgb(from var(--t1) r g b / 7%);
+  pointer-events: none;
+}
+
+.nodo-task:active::after {
+  background: rgb(from var(--t1) r g b / 14%);
+}
+
+/* In corso: come il bottone di uno script in esecuzione, fondo al 42% che pulsa. */
+.nodo-task.stato-inCorso {
+  --riempimento: 42%;
+}
+
+.nodo-task.stato-inCorso::before {
+  animation: nodo-pulsa 1.1s ease-in-out infinite;
+}
+
+@keyframes nodo-pulsa {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Fatta: il colore della priorità sparisce, resta un bottone spento in inchiostro da decorazione. */
+.nodo-task.stato-fatta {
+  --priorita: var(--t4);
+
+  color: var(--t3);
+}
+
+/* Selezionata: l'anello della scelta di tern-ui attorno al filo del bottone. */
+.nodo-task.selezionato {
+  box-shadow:
+    inset 0 0 0 2px var(--priorita),
+    var(--sel-ring);
+}
+
+.nodo-titolo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+  font-weight: 500;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+/* Oltre due righe il titolo si taglia: intero nel tooltip e nella tendina. */
+.testo-titolo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.simboli {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  color: var(--t3);
+}
+
+.simboli .ico {
+  width: 12px;
+  height: 12px;
+}
+
+/* Priorità alzata dalle regole: la freccia prende il colore della priorità effettiva. */
+.simbolo-alzata {
+  color: var(--priorita);
+}
+
+.nodo-task.stato-fatta .simbolo-alzata {
+  color: inherit;
+}
+
+.simbolo-rischi {
+  color: var(--warn-ink);
+}
+
+/* Il rombo dell'atomica non ha un'icona in tern-ui: resta il segno, piccolo e in inchiostro da etichetta. */
+.simbolo-atomica {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.nodo-costi {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 18px;
+  color: var(--t3);
+}
+
+.icona-focus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  font-size: 12px;
+}
+
+/* Pallini del costo tempo: inchiostro da etichetta, pieni quanto il costo. */
+.pallini {
+  display: inline-flex;
+  gap: 3px;
+  color: var(--t3);
+}
+
+.pallino {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.25px currentcolor;
+}
+
+.pallino.pieno {
+  background: currentcolor;
+}
+
+/* Pallino sul bordo sinistro, verso le task da cui si dipende: da qui si trascina una dipendenza. */
+.nodo-task .partenza-dipendenza,
+.nodo-catena .partenza-piano-b {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1.5px var(--l4);
+  cursor: crosshair;
+  transition: background-color var(--dur-state) var(--ease);
+}
+
+.nodo-task .partenza-dipendenza:hover,
+.nodo-catena .partenza-piano-b:hover {
+  background: var(--accent-fill);
+  box-shadow: 0 0 0 3px rgb(from var(--accent) r g b / 18%);
+  transition: none;
+}
+
+/* Punto d'arrivo grande quanto il nodo, attivo solo mentre si trascina da un'altra task.
+   È il posto dove si lascia cadere qualcosa: l'unico tratteggio che tern ammette, come .t-empty.drop.over. */
+.nodo-task .arrivo-dipendenza {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.nodo-task .arrivo-dipendenza.attivo {
+  z-index: 1;
+  pointer-events: all;
+}
+
+.nodo-task .arrivo-dipendenza.attivo:hover {
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 3px;
+  background: rgb(from var(--accent) r g b / 6%);
+}
+
+/* ---------- Barra dei filtri ---------- */
+.barra-filtri {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 8px;
+  box-shadow: inset 0 -1px 0 var(--l1);
+}
+
+.barra-filtri fieldset.filtri {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gruppo-filtro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gruppo-filtro-caselle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+/* Gruppo con filtri attivi: il nome prende l'inchiostro d'accento anche da chiuso. */
+.gruppo-filtro.attivo .gruppo-filtro-nome {
+  color: var(--accent-ink);
+}
+
+.gruppo-filtro-tasto .ico {
+  width: 12px;
+  height: 12px;
+  color: var(--t3);
+}
+
+/* Le icone del costo focus dentro un chip restano alla misura del chip. */
+.gruppo-filtro-chip .icona-focus {
+  width: 12px;
+  font-size: 10px;
+}
+
+.gruppo-filtro-chip svg {
+  height: 13px;
+}
+
+.barra-filtri .t-opt {
+  gap: 6px;
+}
+
+/* Il titolo della task in focus si taglia: intero nel tooltip del grafo e nella tendina. */
+.esci-focus {
+  max-width: 40%;
+  margin-left: auto;
+}
+
+.esci-focus-testo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Tendina: la terza isola ---------- */
+.tendina {
+  position: relative;
+  flex: none;
+  gap: 16px;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+}
+
+/* Testata ferma in cima mentre il contenuto scorre, da bordo a bordo dell'isola. */
+.tendina > .t-head {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  justify-content: space-between;
+  margin: 0 -16px;
+  padding: 0 6px 0 16px;
+  background: var(--panel);
+}
+
+.azioni-tendina {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Bordo sinistro trascinabile: il divisore di tern-ui (.t-grip) sul bordo dell'isola.
+   «Sticky» e alta zero nel flusso, così resta ferma a tutta altezza mentre il contenuto scorre;
+   il margine annulla il gap che la separerebbe dalla testata. */
+.maniglia-tendina {
+  position: sticky;
+  top: 0;
+  z-index: calc(var(--z-sticky) + 1);
+  flex: none;
+  width: 8px;
+  height: 0;
+  margin: 0 0 -16px -16px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.maniglia-tendina::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 100vh;
+}
+
+.maniglia-tendina::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100vh;
+  background: transparent;
+  transition: background-color var(--dur-state) var(--ease);
+}
+
+.maniglia-tendina:is(:hover, :active, :focus-visible)::after {
+  background: rgb(from var(--accent) r g b / 45%);
+  transition: none;
+}
+
+.maniglia-tendina:focus-visible {
+  box-shadow: none;
+}
+
+/* Il fieldset dei campi serve solo a disabilitarli sulle task fatte. */
+.tendina fieldset.campi {
+  display: contents;
+}
+
+/* Gruppi di scelte: intestazione di gruppo (t-sec) e le opzioni sotto, senza cornice dentro l'isola. */
+.tendina .campi > fieldset,
+.esito-test {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tendina legend.t-sec,
+.esito-test legend.t-sec {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+/* Stato ed esito sono tre voci corte: stanno in riga. */
+.tendina .campi > fieldset:first-of-type,
+.esito-test {
+  flex-flow: row wrap;
+  column-gap: 16px;
+}
+
+.tendina .t-opt .icona-focus,
+.tendina .t-opt .pallini {
+  flex: none;
+}
+
+.tendina .t-textarea {
+  resize: vertical;
+}
+
+/* Priorità alzata dalle regole: avviso in linea, tinto dal colore della priorità effettiva. */
+.priorita-effettiva {
+  --tc: var(--priorita);
+
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.priorita-effettiva > .ico {
+  width: 13px;
+  height: 13px;
+}
+
+.riapri,
+.elimina-task {
+  align-self: flex-start;
+}
+
+/* Blocca / Dipende da: elenco di righe di tern-ui con il pallino della priorità. */
+.elenco-task .t-sec {
+  margin-bottom: 4px;
+}
+
+.elenco-task .t-list {
+  margin: 0 -10px;
+  padding: 0;
+  list-style: none;
+}
+
+.voce-task .t-dot {
+  margin-top: 5.5px;
+}
+
+.vuoto-piccolo {
+  margin: 0;
+}
+
+/* ---------- Catena di verifica ---------- */
+.catena {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catena > .t-sec {
+  margin-bottom: 0;
+}
+
+/* Il grafo della catena poggia nell'incavo di una colonna della board, dentro l'isola della tendina. */
+.grafo-catena {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+  border-radius: var(--r-ctl);
+  background: var(--bd-lane);
+  box-shadow: inset 0 0 0 1px var(--l1);
+}
+
+/* Tutto schermo: la catena diventa un'isola sopra l'app, a tutta finestra. */
+.catena.a-tutto-schermo {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  padding: 12px 16px;
+  background: var(--panel);
+}
+
+.catena.a-tutto-schermo .grafo-catena {
+  flex: 1;
+  height: auto;
+}
+
+.catena.a-tutto-schermo .dettaglio-catena {
+  max-width: 480px;
+}
+
+/* Fieldset usato solo per disabilitare tutto sulle task fatte. */
+.dettaglio-catena {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.dettaglio-catena > .t-btn {
+  align-self: flex-start;
+}
+
+.dettaglio-catena .aggiungi {
+  display: flex;
+  gap: 6px;
+}
+
+.dettaglio-catena .aggiungi .t-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nodi della catena: card piccole (raggio dei controlli) col tono del loro tipo.
+   Larghezza massima e due righe di titolo: devono stare in INGOMBRO_CATENA (src/regole). */
+.nodo-catena {
+  --tc: var(--t4);
+  --ti: var(--t3);
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+  max-width: 180px;
+  padding: 5px 9px 6px;
+  border-radius: var(--r-ctl);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px var(--bd-ring),
+    var(--bd-shadow);
+  cursor: pointer;
+}
+
+.nodo-catena:not(.catena-task, .esito-daProvare) {
+  background: linear-gradient(rgb(from var(--tc) r g b / 9%) 0 0), var(--card);
+  box-shadow:
+    0 0 0 1px rgb(from var(--tc) r g b / 30%),
+    var(--bd-shadow);
+}
+
+.nodo-catena .tipo-nodo {
+  font: var(--text-meta);
+  color: var(--ti);
+}
+
+/* La task di partenza: ferma, in rilievo, col peso di un titolo piccolo. */
+.catena-task {
+  font-weight: 550;
+  background: var(--raise);
+  cursor: default;
+}
+
+.catena-rischio {
+  --tc: var(--warn);
+  --ti: var(--warn-ink);
+}
+
+/* Test da provare: anello delle caselle vuote (--l4, «aspetta»). */
+.catena-test.esito-daProvare {
+  box-shadow:
+    0 0 0 1px var(--l4),
+    var(--bd-shadow);
+}
+
+.catena-test.esito-passato {
+  --tc: var(--ok);
+  --ti: var(--ok-ink);
+}
+
+.catena-test.esito-fallito {
+  --tc: var(--bad);
+  --ti: var(--bad-ink);
+}
+
+.catena-azione {
+  --tc: var(--info);
+  --ti: var(--info-ink);
+}
+
+/* Piano B da eseguire: il test che lo precede è fallito. Lo evidenzia il colore del «riscontro» di tern. */
+.nodo-catena.da-eseguire {
+  outline: 2px solid var(--find-ring);
+  outline-offset: 2px;
+}
+
+.nodo-catena.selezionato,
+.nodo-catena.selezionato:not(.catena-task, .esito-daProvare) {
+  box-shadow:
+    var(--sel-ring),
+    var(--bd-shadow);
+}
+
+.catena-azione .t-btn {
+  align-self: flex-start;
+  max-width: 100%;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11.5px;
+}
+
+.task-creata {
+  color: var(--info-ink);
+}
+
+.task-creata-testo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ✓ e ✗ dell'esito: bottoni piccoli; quello scelto prende il tono dell'esito, non l'accento. */
+.nodo-catena .esiti {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.nodo-catena .esiti .t-btn {
+  width: 24px;
+  height: 18px;
+}
+
+.nodo-catena .esiti .t-btn .ico {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
+}
+
+.nodo-catena .esiti .t-btn[aria-pressed="true"]:first-child {
+  color: var(--ok-ink);
+  background: rgb(from var(--ok) r g b / 14%);
+  box-shadow: inset 0 0 0 1px rgb(from var(--ok) r g b / 35%);
+}
+
+.nodo-catena .esiti .t-btn[aria-pressed="true"]:last-child {
+  color: var(--bad-ink);
+  background: rgb(from var(--bad) r g b / 14%);
+  box-shadow: inset 0 0 0 1px rgb(from var(--bad) r g b / 35%);
+}
+
+/* Maniglie fisse della struttura: piccole tacche nell'inchiostro di decorazione. */
+.nodo-catena .react-flow__handle:not(.partenza-piano-b, .arrivo-piano-b) {
+  width: 6px;
+  height: 6px;
+  border: 0;
+  background: var(--t4);
+}
+
+/* Arrivo del piano B grande quanto il test, dietro ai pulsanti dell'esito. */
+.nodo-catena .arrivo-piano-b {
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  border-radius: var(--r-ctl);
+  background: transparent;
+}
+
+.react-flow__edge.freccia-piano-b .react-flow__edge-path {
+  stroke-dasharray: 5 4;
+}
+
+.react-flow__edge.freccia-piano-b.da-eseguire .react-flow__edge-path {
+  stroke: var(--warn);
+  stroke-width: 2;
+}

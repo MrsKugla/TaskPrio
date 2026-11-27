@@ -20,9 +20,10 @@ import {
   type PrioritaEffettiva,
   type Task,
 } from "../regole";
-import { ETICHETTE_FOCUS, ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, IconaFocus, Pallini } from "./aspetto";
+import { ETICHETTE_FOCUS, ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, Etichetta, IconaFocus, Pallini } from "./aspetto";
 import { CatenaVerifica } from "./CatenaVerifica";
 import { Conferma } from "./Dialoghi";
+import { Icona, TERN } from "./schermo";
 
 type Props = {
   progetto: Progetto;
@@ -53,16 +54,16 @@ function ElencoTask(props: {
   const { titolo, vuoto, task, effettive, onApri } = props;
   return (
     <section className="elenco-task">
-      <h3>{titolo}</h3>
+      <h3 className="t-sec">{titolo}</h3>
       {task.length === 0 ? (
-        <p className="vuoto-piccolo">{vuoto}</p>
+        <p className="vuoto-piccolo t-note">{vuoto}</p>
       ) : (
-        <ul>
+        <ul className="t-list">
           {task.map((t) => (
             <li key={t.id}>
-              <button className="voce-task" onClick={() => onApri(t.id)}>
-                <span className={`campione priorita-${effettive.get(t.id)!.priorita}`} aria-hidden="true" />
-                {t.titolo}
+              <button className="voce-task t-row" onClick={() => onApri(t.id)}>
+                <span className={`campione t-dot priorita-${effettive.get(t.id)!.priorita}`} aria-hidden="true" />
+                {TERN ? <span className="t-row-title">{t.titolo}</span> : t.titolo}
               </button>
             </li>
           ))}
@@ -167,22 +168,23 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
   const nonAtomica = motivoNonAtomica(task);
 
   return (
-    <aside className="tendina" aria-label="Dettagli della task" style={{ width: larghezza }}>
+    <aside className="tendina t-island" aria-label="Dettagli della task" style={{ width: larghezza }}>
       <ManigliaLarghezza larghezza={larghezza} onCambia={setLarghezza} />
-      <header>
-        <h2>Task</h2>
+      <header className="t-head">
+        <h2 className="title">Task</h2>
         <span className="azioni-tendina">
           {/* Il focus è una vista, non una modifica: si usa anche su una task fatta. */}
           <button
-            className={inFocus ? "attiva" : ""}
+            className={`t-btn sm${inFocus ? " attiva" : ""}`}
             aria-pressed={inFocus}
             onClick={() => onFocus(inFocus ? null : task.id)}
             title={inFocus ? "Torna al grafo completo con i filtri di prima" : "Mostra solo questa task e le sue dipendenze"}
           >
+            <Icona nome={inFocus ? "eye-off" : "eye"} />
             {inFocus ? "Esci dal focus" : "Focus"}
           </button>
-          <button className="chiudi" onClick={onChiudi} aria-label="Chiudi" title="Chiudi (Esc)">
-            ×
+          <button className="chiudi t-btn icon sm quiet" onClick={onChiudi} aria-label="Chiudi" title="Chiudi (Esc)">
+            {TERN ? <Icona nome="x" /> : "×"}
           </button>
         </span>
       </header>
@@ -190,10 +192,11 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
       {/* Una task fatta è in sola lettura: il fieldset disabilita tutti i campi finché non si usa «Riapri». */}
       <fieldset className="campi" disabled={fatta}>
         <fieldset>
-          <legend>Stato</legend>
+          <legend className="t-sec">Stato</legend>
           {STATI.map((s) => (
-            <label key={s} className="scelta">
+            <label key={s} className="scelta t-opt">
               <input
+                className="t-radio"
                 type="radio"
                 name="stato"
                 checked={task.stato === s}
@@ -204,9 +207,10 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
           ))}
         </fieldset>
 
-        <label>
-          Titolo
+        <label className="t-field">
+          <Etichetta>Titolo</Etichetta>
           <input
+            className="t-input"
             value={titolo}
             onChange={(e) => {
               setTitolo(e.target.value);
@@ -216,35 +220,37 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
           />
         </label>
 
-        <label>
-          Descrizione
-          <textarea rows={5} value={task.descrizione} onChange={(e) => modifica({ descrizione: e.target.value })} />
+        <label className="t-field">
+          <Etichetta>Descrizione</Etichetta>
+          <textarea className="t-textarea" rows={5} value={task.descrizione} onChange={(e) => modifica({ descrizione: e.target.value })} />
         </label>
 
         <fieldset>
-          <legend>Priorità scelta</legend>
+          <legend className="t-sec">Priorità scelta</legend>
           {effettiva.motivi.length > 0 && (
-            <p className={`priorita-effettiva priorita-${effettiva.priorita}`}>
-              <span className="campione" aria-hidden="true" />
+            // Avviso in linea di tern-ui, tinto dal colore della priorità alzata.
+            <p className={`priorita-effettiva t-callout priorita-${effettiva.priorita}`} data-tone="warning">
+              {TERN ? <Icona nome="arrow-up" /> : <span className="campione" aria-hidden="true" />}
               <span>
-                ↑ {ETICHETTE_PRIORITA[effettiva.priorita]} perché {effettiva.motivi.map(testoMotivo).join("; ")}
+                {TERN ? "" : "↑ "}
+                {ETICHETTE_PRIORITA[effettiva.priorita]} perché {effettiva.motivi.map(testoMotivo).join("; ")}
               </span>
             </p>
           )}
           {PRIORITA.map((p) => (
-            <label key={p} className="scelta">
-              <input type="radio" name="priorita" checked={task.priorita === p} onChange={() => modifica({ priorita: p })} />
-              <span className={`campione priorita-${p}`} aria-hidden="true" />
+            <label key={p} className="scelta t-opt">
+              <input className="t-radio" type="radio" name="priorita" checked={task.priorita === p} onChange={() => modifica({ priorita: p })} />
+              <span className={`campione t-dot priorita-${p}`} aria-hidden="true" />
               {ETICHETTE_PRIORITA[p]}
             </label>
           ))}
         </fieldset>
 
         <fieldset>
-          <legend>Costo focus</legend>
+          <legend className="t-sec">Costo focus</legend>
           {COSTI_FOCUS.map((f) => (
-            <label key={f} className="scelta">
-              <input type="radio" name="costoFocus" checked={task.costoFocus === f} onChange={() => modifica({ costoFocus: f })} />
+            <label key={f} className="scelta t-opt">
+              <input className="t-radio" type="radio" name="costoFocus" checked={task.costoFocus === f} onChange={() => modifica({ costoFocus: f })} />
               <IconaFocus focus={f} />
               {ETICHETTE_FOCUS[f]}
             </label>
@@ -252,18 +258,20 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
         </fieldset>
 
         <fieldset>
-          <legend>Costo tempo</legend>
+          <legend className="t-sec">Costo tempo</legend>
           {COSTI_TEMPO.map((t) => (
-            <label key={t} className="scelta">
-              <input type="radio" name="costoTempo" checked={task.costoTempo === t} onChange={() => modifica({ costoTempo: t })} />
+            <label key={t} className="scelta t-opt">
+              <input className="t-radio" type="radio" name="costoTempo" checked={task.costoTempo === t} onChange={() => modifica({ costoTempo: t })} />
               <Pallini tempo={t} />
               {ETICHETTE_TEMPO[t]}
             </label>
           ))}
         </fieldset>
 
-        <label className="scelta" title={nonAtomica}>
+        <label className="scelta t-opt" title={nonAtomica}>
           <input
+            className="t-switch"
+            role="switch"
             type="checkbox"
             checked={task.atomica}
             disabled={nonAtomica !== undefined}
@@ -274,7 +282,8 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
       </fieldset>
 
       {fatta && (
-        <button className="riapri" onClick={() => applicaStato((opzioni) => riapri(progetto, task.id, opzioni))}>
+        <button className="riapri t-btn" onClick={() => applicaStato((opzioni) => riapri(progetto, task.id, opzioni))}>
+          <Icona nome="undo" />
           Riapri
         </button>
       )}
@@ -285,7 +294,8 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
       {/* Una task atomica non richiede test: non ha catena di verifica. */}
       {!task.atomica && <CatenaVerifica progetto={progetto} task={task} applica={applica} solaLettura={fatta} onApri={onApri} />}
 
-      <button className="pericolo elimina-task" onClick={() => setConfermaElimina(true)}>
+      <button className="pericolo elimina-task t-btn danger" onClick={() => setConfermaElimina(true)}>
+        <Icona nome="trash" />
         Elimina task
       </button>
 
@@ -293,6 +303,7 @@ export function Tendina({ progetto, task, effettive, applica, onChiudi, onApri, 
         <Conferma
           messaggio={`Eliminare la task «${task.titolo}»?`}
           etichettaConferma="Elimina"
+          pericolo
           onAnnulla={() => setConfermaElimina(false)}
           onConferma={() => {
             setConfermaElimina(false);

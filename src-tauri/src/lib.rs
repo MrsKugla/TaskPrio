@@ -15,6 +15,7 @@ struct Db(Mutex<Connection>);
 
 const CHIAVE_ULTIMO_PROGETTO: &str = "ultimo_progetto";
 const CHIAVE_GIORNI_PRESTO_ALTA: &str = "giorni_presto_alta";
+const CHIAVE_STILE: &str = "stile";
 const CHIAVE_TEMA: &str = "tema";
 const CHIAVE_CRT: &str = "crt";
 
@@ -25,6 +26,8 @@ struct DatiSalvati {
     ultimo_progetto_id: Option<String>,
     // Assente finché non si cambia nelle Impostazioni: il valore predefinito lo decide il modulo regole.
     giorni_presto_alta: Option<u32>,
+    // Assente finché non si sceglie: l'interfaccia parte dallo stile arcade.
+    stile: Option<String>,
     // Assente finché non si sceglie: l'interfaccia parte dal tema chiaro.
     tema: Option<String>,
     // Intensità dell'effetto CRT da 0 a 100; assente finché non si regola (l'interfaccia parte da 0).
@@ -59,9 +62,10 @@ fn carica(conn: &Connection) -> rusqlite::Result<DatiSalvati> {
     };
     let ultimo_progetto_id = leggi(CHIAVE_ULTIMO_PROGETTO)?;
     let giorni_presto_alta = leggi(CHIAVE_GIORNI_PRESTO_ALTA)?.and_then(|v| v.parse().ok());
+    let stile = leggi(CHIAVE_STILE)?;
     let tema = leggi(CHIAVE_TEMA)?;
     let crt = leggi(CHIAVE_CRT)?.and_then(|v| v.parse().ok());
-    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta, tema, crt })
+    Ok(DatiSalvati { progetti, ultimo_progetto_id, giorni_presto_alta, stile, tema, crt })
 }
 
 fn salva(conn: &Connection, progetto: &Value) -> Result<(), String> {
@@ -124,6 +128,13 @@ fn imposta_giorni_presto_alta(db: State<Db>, giorni: u32) -> Result<(), String> 
 }
 
 #[tauri::command]
+fn imposta_stile(db: State<Db>, stile: String) -> Result<(), String> {
+    scrivi_impostazione(&db.0.lock().unwrap(), CHIAVE_STILE, &stile)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn imposta_tema(db: State<Db>, tema: String) -> Result<(), String> {
     scrivi_impostazione(&db.0.lock().unwrap(), CHIAVE_TEMA, &tema)
         .map(|_| ())
@@ -178,6 +189,7 @@ pub fn run() {
             elimina_progetto,
             imposta_ultimo_progetto,
             imposta_giorni_presto_alta,
+            imposta_stile,
             imposta_tema,
             imposta_crt,
             esporta_dati,

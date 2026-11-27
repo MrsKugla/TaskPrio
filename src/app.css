@@ -900,12 +900,6 @@ button.voce-task,
   animation: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .grafo .react-flow__edge-path {
-    animation: none;
-  }
-}
-
 .elenco-task h3 {
   margin: 0 0 4px;
   font-size: 13px;

@@ -1,0 +1,1177 @@
+/*
+  tern-ui · superfici e dati
+  Card, chip, tasti, tabelle, coppie, codice, avvisi, messaggi, avatar, numeri, stati vuoti,
+  attese, board. Ogni blocco dice da quale foglio di Tern 0.9.34 viene.
+*/
+
+/* ---------- Card (surface.css: .sf-card) ---------- */
+.t-card {
+	position: relative;
+	border-radius: var(--r-card);
+	background: var(--card-bg);
+	box-shadow:
+		inset 0 0 0 1px light-dark(rgb(from var(--tc) r g b / 16%), rgb(from var(--tc) r g b / 20%)),
+		var(--lift-card);
+	transition: box-shadow var(--dur-turn) var(--ease);
+}
+.t-card:not([data-tone]) {
+	--tc: var(--neutral);
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		var(--lift-card);
+}
+.t-card.solid {
+	background: var(--card);
+}
+.t-card:is(.selected, [aria-selected='true']) {
+	box-shadow:
+		inset 0 0 0 1px var(--accent),
+		0 0 0 3px rgb(from var(--accent) r g b / 16%);
+}
+/* Senza cornice: solo la struttura testa/corpo */
+.t-card.bare {
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+}
+.t-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 30px;
+	padding: 4px 10px 4px 12px;
+	list-style: none;
+}
+.t-card-head::-webkit-details-marker {
+	display: none;
+}
+.t-card-head > .ico {
+	width: 14px;
+	height: 14px;
+	color: var(--tc);
+}
+.t-card:not([data-tone]) > .t-card-head > .ico {
+	color: var(--t3);
+}
+.t-card-meta {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--t3);
+}
+.t-card-end {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	margin: -2px 0 -2px auto;
+}
+.t-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--inner-gap);
+	min-width: 0;
+	padding: 0 12px 10px;
+}
+.t-card-body:first-child {
+	padding-top: 10px;
+}
+.t-card-foot {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 12px;
+	box-shadow: inset 0 1px 0 var(--l1);
+}
+/* Card che si piega: <details class="t-card"><summary class="t-card-head">… <svg class="ico tw"> */
+details.t-card > .t-card-head {
+	border-radius: var(--r-card);
+	cursor: pointer;
+}
+details.t-card > .t-card-head:hover {
+	background: var(--shade);
+}
+.t-card-head > .ico.tw {
+	width: 12px;
+	height: 12px;
+	margin-left: auto;
+	color: var(--t4);
+	transform: rotate(-90deg);
+	transition: transform var(--dur-turn) var(--out);
+}
+details[open].t-card > .t-card-head > .ico.tw {
+	transform: none;
+}
+
+/* Gruppo di righe su un foglio: le impostazioni di Tern (prefs.css: .pf-rows, .pf-row) */
+.t-rows {
+	position: relative;
+	border-radius: var(--r-card);
+	background: var(--card);
+	box-shadow:
+		0 0 0 1px var(--l2),
+		var(--lift-card);
+}
+.t-rows > * + * {
+	box-shadow: inset 0 1px 0 var(--l1);
+}
+.t-set {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	min-height: 58px;
+	padding: 11px 16px;
+}
+.t-set-text {
+	flex: 1;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.t-set-text > b,
+.t-set-text > label {
+	display: block;
+	font-size: 13.5px;
+	font-weight: 500;
+	color: var(--t1);
+}
+.t-set-text > p {
+	margin-top: 2px;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--t3);
+}
+.t-set-ctl {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+}
+.t-set.stack {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+	padding: 13px 16px 14px;
+}
+.t-set.compact {
+	min-height: 44px;
+	padding: 8px 16px;
+}
+.t-set.compact .t-set-text > b {
+	font-weight: 400;
+}
+
+/* ---------- Chip e badge (surface.css: .sf-chip, .sf-badge; board.css: .bd-chip) ---------- */
+.t-chip {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 4px;
+	height: 18px;
+	padding: 0 7px;
+	border-radius: 999px;
+	font: var(--text-micro);
+	letter-spacing: var(--track);
+	white-space: nowrap;
+	color: var(--t2);
+	background: var(--chip-bg);
+	box-shadow: inset 0 0 0 1px var(--l2);
+}
+.t-chip[data-tone]:not([data-tone='neutral']) {
+	color: var(--ti);
+	background: rgb(from var(--tc) r g b / 10%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--tc) r g b / 22%);
+}
+.t-chip.plain {
+	box-shadow: none;
+}
+.t-chip .ico {
+	width: 11px;
+	height: 11px;
+}
+.t-chip .t-dot {
+	width: 6px;
+	height: 6px;
+	background: currentColor;
+}
+.t-chip.mono {
+	font: 11px/1 var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+}
+/* Etichetta colorata a piacere: style="--h: #8e5cf7" (board.css: .bd-tag) */
+.t-chip.hue {
+	--h: #6b7280;
+	/* Tern mescola all'82%: arancio e turchese restano sotto 4,5:1. Qui il testo è più vicino all'inchiostro. */
+	color: light-dark(
+		color-mix(in oklab, var(--h) 58%, var(--t1)),
+		color-mix(in srgb, var(--h) 62%, #fff)
+	);
+	background: light-dark(
+		color-mix(in srgb, var(--h) 13%, transparent),
+		color-mix(in srgb, var(--h) 20%, transparent)
+	);
+	box-shadow: none;
+}
+/* Chip che si sceglie: più alto, perché si tocca (prefs.css: .pf-chip) */
+.t-chip:is(button, label) {
+	height: 28px;
+	gap: 6px;
+	padding: 0 11px;
+	font-size: 12.5px;
+	background: var(--well);
+	cursor: pointer;
+	transition:
+		background var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		box-shadow var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-chip:is(button, label):hover {
+	color: var(--t1);
+	box-shadow: inset 0 0 0 1px var(--l3);
+}
+.t-chip:is(button, label):active {
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-chip:is([aria-pressed='true'], :has(input:checked)) {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 10%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--accent) r g b / 25%);
+}
+.t-chip:is(button, label):is(:focus-visible, :has(input:focus-visible)) {
+	box-shadow: var(--sel-ring);
+}
+
+/* Il pallino di stato (base.css: .sdot) */
+.t-dot {
+	position: relative;
+	display: inline-block;
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--tc, var(--t4));
+}
+/* In corso: un'onda che si allarga e svanisce */
+.t-dot.live {
+	background: var(--live);
+}
+.t-dot.live::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: inherit;
+	animation: t-ping 1.6s var(--ease) infinite;
+}
+@keyframes t-ping {
+	0% {
+		opacity: 0.55;
+		transform: scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(2.8);
+	}
+}
+
+/* Numeri accanto alle cose: sempre mono, sempre tabular */
+.t-count {
+	font: var(--text-figure);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+/* Il pallino con il numero sopra un'icona (inbox.css: .tn-ib-pip) */
+.t-pip {
+	display: inline-block;
+	min-width: 15px;
+	height: 15px;
+	padding: 0 4px;
+	border-radius: 999px;
+	font: 550 10px/15px var(--mono);
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	color: #fff;
+	background: var(--accent-fill);
+	box-shadow: 0 1px 3px light-dark(rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.6));
+}
+
+/* Tasti (base.css: .kbd) */
+.t-kbd {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	border-radius: 5px;
+	font: 500 11px/1 var(--mono);
+	letter-spacing: 0;
+	color: var(--t2);
+	background: var(--l1);
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		inset 0 -1px 0 var(--l1);
+}
+.t-kbd.sm {
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 4px;
+	font-size: 10.5px;
+}
+.t-kbds {
+	display: inline-flex;
+	flex: none;
+	gap: 3px;
+}
+
+/* ---------- Coppie chiave-valore (surface-data.css: .sf-kv) ---------- */
+.t-kv {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	column-gap: 14px;
+	row-gap: 1px;
+	margin: 0;
+	font: var(--text-ui);
+}
+.t-kv dt {
+	white-space: nowrap;
+	color: var(--t3);
+}
+.t-kv dd {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+/* ---------- Tabelle (surface-el.css: table.sf-el; surface-data.css: .sf-tbl) ---------- */
+.t-table {
+	width: 100%;
+	border-collapse: collapse;
+	font: var(--text-ui);
+	font-variant-numeric: tabular-nums;
+}
+.t-table th {
+	height: 24px;
+	padding: 0 7px;
+	font: 500 11.5px/24px var(--sans);
+	letter-spacing: var(--track);
+	text-align: left;
+	white-space: nowrap;
+	color: var(--t3);
+	box-shadow: inset 0 -1px 0 var(--l2);
+}
+.t-table td {
+	padding: 3px 7px;
+	vertical-align: top;
+	box-shadow: inset 0 -1px 0 var(--l1);
+}
+.t-table tr:last-child > td {
+	box-shadow: none;
+}
+.t-table :is(th, td).num {
+	text-align: right;
+}
+.t-table td.mono {
+	font: 12.5px/18px var(--mono);
+}
+/* Righe che si scelgono */
+.t-table.pick tbody tr {
+	cursor: pointer;
+}
+.t-table.pick tbody tr:hover {
+	background-color: var(--l1);
+}
+.t-table.pick tbody tr:active {
+	background-color: var(--l2);
+}
+.t-table tbody tr[aria-selected='true'],
+.t-table.pick tbody tr[aria-selected='true']:hover {
+	background-color: var(--sel);
+	box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Colonne ordinabili: <th aria-sort="ascending"><button>Nome <svg class="ico">…</svg></button></th> */
+.t-table th > button {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font: inherit;
+	color: inherit;
+	transition: color var(--dur-state) var(--ease);
+}
+.t-table th > button:hover,
+.t-table th[aria-sort]:not([aria-sort='none']) > button {
+	color: var(--t1);
+}
+.t-table th > button .ico {
+	width: 11px;
+	height: 11px;
+	stroke-width: 2;
+	color: var(--t3);
+	opacity: 0;
+	transition:
+		opacity var(--dur-state) var(--ease),
+		transform var(--dur-turn) var(--out);
+}
+.t-table th > button:hover .ico {
+	opacity: 0.6;
+}
+.t-table th[aria-sort]:not([aria-sort='none']) > button .ico {
+	color: var(--accent);
+	opacity: 1;
+}
+.t-table th[aria-sort='ascending'] > button .ico {
+	transform: rotate(180deg);
+}
+/* In cornice: la tabella dei documenti (doc.css: .tbl). Più aria, testata con fondo. */
+.t-table-frame {
+	overflow: auto;
+	border-radius: var(--r-card);
+	background: var(--card);
+	box-shadow: 0 0 0 1px var(--l2);
+}
+.t-table-frame > .t-table {
+	font-size: 13.5px;
+	line-height: 1.5;
+}
+.t-table-frame > .t-table th {
+	height: auto;
+	padding: 9px 14px;
+	font-size: 12.5px;
+	line-height: 1.5;
+	background: var(--tbl-head);
+}
+.t-table-frame > .t-table td {
+	padding: 9px 14px;
+}
+
+/* ---------- Codice (surface.css: .sf-t-code; doc.css: .code) ---------- */
+.t-code {
+	padding: 0 0.3em;
+	border-radius: 4px;
+	font: 12.5px var(--mono);
+	letter-spacing: 0;
+	overflow-wrap: anywhere;
+	background: var(--chip-bg);
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+.t-pre {
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: var(--r-ctl);
+	font: var(--text-code);
+	letter-spacing: 0;
+	tab-size: 2;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	color: var(--t1);
+	background: var(--code-bg);
+	box-shadow: inset 0 0 0 1px var(--l2);
+}
+.t-pre .p {
+	color: var(--t3);
+	-webkit-user-select: none;
+	user-select: none;
+}
+/* Blocco con testata: <figure class="t-codeblock"><figcaption>bash</figcaption><pre>…</pre></figure> */
+.t-codeblock {
+	overflow: hidden;
+	border-radius: var(--r-card);
+	background: var(--code-bg);
+	box-shadow: inset 0 0 0 1px var(--l2);
+}
+.t-codeblock > figcaption {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 34px;
+	padding: 0 8px 0 14px;
+	border-bottom: 1px solid var(--l1);
+	font: 11.5px var(--mono);
+	color: var(--t3);
+}
+.t-codeblock > pre {
+	margin: 0;
+	padding: 14px 16px 16px;
+	overflow: auto;
+	font: 12.5px/1.7 var(--mono);
+	tab-size: 2;
+	color: var(--t1);
+}
+/* Colori della sintassi: le stesse classi che scrive l'evidenziatore di Tern */
+.tk-comment {
+	color: var(--tk-comment);
+}
+.tk-doc {
+	color: var(--tk-doc);
+}
+.tk-keyword {
+	color: var(--tk-keyword);
+}
+.tk-function {
+	color: var(--tk-function);
+}
+.tk-macro {
+	color: var(--tk-macro);
+}
+.tk-variable {
+	color: var(--tk-variable);
+}
+.tk-property {
+	color: var(--tk-property);
+}
+.tk-string {
+	color: var(--tk-string);
+}
+.tk-escape {
+	color: var(--tk-escape);
+}
+.tk-number {
+	color: var(--tk-number);
+}
+.tk-constant {
+	color: var(--tk-constant);
+}
+.tk-type {
+	color: var(--tk-type);
+}
+.tk-tag {
+	color: var(--tk-tag);
+}
+.tk-heading {
+	color: var(--tk-heading);
+}
+.tk-link {
+	color: var(--tk-link);
+}
+.tk-operator {
+	color: var(--tk-operator);
+}
+.tk-punct {
+	color: var(--tk-punct);
+}
+.tk-inserted {
+	color: var(--ok-ink);
+}
+.tk-deleted {
+	color: var(--bad-ink);
+}
+
+/* ---------- Avviso in linea (doc.css: .callout; dialog.css: .mdl-err) ---------- */
+.t-callout:not([data-tone]) {
+	--tc: var(--accent);
+	--ti: var(--accent-ink);
+}
+.t-callout {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border-radius: var(--r-card);
+	font-size: 13px;
+	line-height: 1.5;
+	background: light-dark(rgb(from var(--tc) r g b / 7%), rgb(from var(--tc) r g b / 10%));
+	box-shadow: inset 0 0 0 1px
+		light-dark(rgb(from var(--tc) r g b / 18%), rgb(from var(--tc) r g b / 22%));
+}
+.t-callout > .ico {
+	width: 15px;
+	height: 15px;
+	margin-top: 2px;
+	color: var(--tc);
+}
+.t-callout b {
+	font-weight: 550;
+	color: var(--ti);
+}
+
+/* ---------- Messaggi (surface-message.css) ---------- */
+.t-msg {
+	position: relative;
+	display: grid;
+	gap: 4px;
+	min-width: 0;
+}
+/* Solo il messaggio appena arrivato: si mette a fuoco, non scivola */
+.t-msg.arrive {
+	animation: t-msg-in 0.28s var(--out) backwards;
+}
+.t-msg-head {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	min-width: 0;
+	line-height: 20px;
+	white-space: nowrap;
+}
+.t-msg-author {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 550;
+	color: var(--t1);
+}
+.t-msg-time {
+	flex: none;
+	font: var(--text-figure);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+.t-msg-body {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+/* A fumetto: il mio a destra in accento, quello degli altri a sinistra in grigio. L'angolo verso chi parla è stretto. */
+.t-msg.mine > .t-msg-body,
+.t-msg.theirs > .t-msg-body {
+	max-width: min(78%, 560px);
+	padding: 8px 14px;
+}
+.t-msg.mine > .t-msg-body {
+	justify-self: end;
+	border-radius: 18px 18px 6px 18px;
+	background: light-dark(rgb(from var(--accent) r g b / 13%), rgb(from var(--accent) r g b / 24%));
+}
+.t-msg.theirs > .t-msg-body {
+	justify-self: start;
+	border-radius: 18px 18px 18px 6px;
+	background: light-dark(rgb(from var(--t1) r g b / 6.5%), rgb(from var(--t1) r g b / 8.5%));
+}
+.t-msg.mine > :is(.t-reacts, .t-msg-head) {
+	justify-content: flex-end;
+}
+@keyframes t-msg-in {
+	from {
+		opacity: 0;
+		filter: blur(3px);
+	}
+}
+.t-reacts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 6px 0 2px;
+}
+.t-react {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 24px;
+	padding: 0 9px;
+	border-radius: 999px;
+	font: 500 12px/1 var(--sans);
+	color: var(--t2);
+	background: var(--chip-bg);
+	box-shadow: inset 0 0 0 1px var(--l2);
+	transition:
+		background-color var(--dur-state) var(--ease),
+		box-shadow var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-react:hover {
+	color: var(--t1);
+	background: var(--l2);
+	box-shadow: inset 0 0 0 1px var(--l3);
+	transition:
+		background-color 0s,
+		box-shadow 0s,
+		color 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-react:active {
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-react[aria-pressed='true'] {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 12%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--accent) r g b / 45%);
+}
+.t-react:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-react .t-count {
+	color: inherit;
+}
+
+/* ---------- Avatar (surface-avatar.css) ---------- */
+/* <span class="t-avatar" style="--av-h: 260">DG</span>: la tinta viene dal nome, scelta da chi scrive la pagina */
+.t-avatar {
+	--av: 28px;
+	--av-h: 222;
+	position: relative;
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: var(--av);
+	height: var(--av);
+	border-radius: 50%;
+	font: 600 calc(var(--av) * 0.39) / 1 var(--sans);
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #fff;
+	/* Luminosità fissa in oklch: le iniziali bianche reggono 4,5:1 con qualsiasi tinta */
+	background: oklch(52% 0.13 var(--av-h));
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+}
+.t-avatar.xs {
+	--av: 16px;
+}
+.t-avatar.sm {
+	--av: 20px;
+}
+.t-avatar.lg {
+	--av: 36px;
+}
+.t-avatar > img {
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+	object-fit: cover;
+}
+/* Quadrato: per agenti, progetti, cose che non sono persone */
+.t-avatar.square {
+	border-radius: calc(var(--av) * 0.3);
+	font-family: var(--mono);
+	letter-spacing: 0;
+	text-transform: none;
+	color: light-dark(oklch(42% 0.13 var(--av-h)), oklch(82% 0.1 var(--av-h)));
+	background: oklch(62% 0.15 var(--av-h) / 18%);
+	box-shadow: inset 0 0 0 1px oklch(58% 0.14 var(--av-h) / 14%);
+}
+.t-avatar.blank {
+	color: var(--t3);
+	background: var(--chip-bg);
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+/* Presenza: <i class="t-avatar-dot" data-tone="success"></i> */
+.t-avatar-dot {
+	position: absolute;
+	right: -1.5px;
+	bottom: -1.5px;
+	width: calc(var(--av) * 0.32);
+	height: calc(var(--av) * 0.32);
+	border: 2px solid var(--av-ring, var(--panel));
+	border-radius: 50%;
+	background: var(--tc, var(--t3));
+}
+.t-avatars {
+	display: inline-flex;
+	align-items: center;
+}
+.t-avatars > .t-avatar {
+	outline: 2px solid var(--av-ring, var(--panel));
+}
+.t-avatars > .t-avatar + .t-avatar {
+	margin-left: calc(var(--av) * -0.22);
+}
+
+/* ---------- Numeri in evidenza (surface-controls.css: .sf-stats) ---------- */
+/* Una fila separata da fili, non una griglia di card */
+.t-stats {
+	display: flex;
+	flex-wrap: wrap;
+	row-gap: 12px;
+	margin-left: -17px;
+	clip-path: inset(0 0 0 17px);
+}
+.t-stat {
+	display: flex;
+	flex: 0 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 14ch;
+	max-width: 280px;
+	padding: 0 28px 0 16px;
+	box-shadow: inset 1px 0 0 var(--l2);
+}
+.t-stat-label,
+.t-stat-sub {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font: 12px/16px var(--sans);
+	color: var(--t3);
+}
+.t-stat-label {
+	font-weight: 500;
+}
+.t-stat-value {
+	font: 550 22px/30px var(--sans);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: var(--track-h2);
+	white-space: nowrap;
+	color: var(--t1);
+}
+.t-stat[data-tone] > .t-stat-value {
+	color: var(--ti);
+}
+
+/* ---------- Stato vuoto (surface-empty.css) ---------- */
+.t-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	min-height: 168px;
+	padding: 28px 20px;
+	text-align: center;
+	color: var(--t3);
+}
+/* Quando lo stato vuoto prende il posto di un contenuto che c'era */
+.t-empty.arrive {
+	animation: t-empty-in 0.26s var(--out) both;
+}
+.t-empty-ic {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	margin-bottom: 10px;
+	border-radius: 50%;
+	color: var(--tc, var(--t3));
+	background: light-dark(
+		rgb(from var(--tc, var(--t3)) r g b / 12%),
+		rgb(from var(--tc, var(--t3)) r g b / 16%)
+	);
+	box-shadow: inset 0 0 0 1px
+		light-dark(
+			rgb(from var(--tc, var(--t3)) r g b / 10%),
+			rgb(from var(--tc, var(--t3)) r g b / 14%)
+		);
+}
+.t-empty-ic .ico {
+	width: 20px;
+	height: 20px;
+}
+.t-empty-title {
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--t1);
+}
+.t-empty > p {
+	max-width: 40ch;
+}
+.t-empty-acts {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+	margin-top: 12px;
+}
+/* In una riga, dove non c'è posto per il disegno */
+.t-empty.inline {
+	flex-direction: row;
+	justify-content: flex-start;
+	gap: 10px;
+	min-height: 32px;
+	padding: 4px 6px 4px 10px;
+	text-align: left;
+}
+/* Dove si lascia cadere un file: l'unico tratteggio del sistema */
+.t-empty.drop {
+	border: 1.5px dashed light-dark(rgb(from var(--t3) r g b / 45%), rgb(from var(--t3) r g b / 50%));
+	border-radius: var(--r-card);
+	background: light-dark(rgb(from var(--t1) r g b / 1.5%), rgb(from var(--t1) r g b / 2.5%));
+	transition:
+		border-color 0.16s var(--ease),
+		background-color 0.16s var(--ease);
+}
+.t-empty.drop .t-empty-ic {
+	border-radius: var(--r-ctl);
+	color: var(--t3);
+	background: var(--raise);
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		0 1px 2px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 30%));
+}
+.t-empty.drop.over {
+	border-color: var(--accent);
+	background: light-dark(rgb(from var(--accent) r g b / 6%), rgb(from var(--accent) r g b / 10%));
+}
+.t-empty.drop.over .t-empty-ic {
+	color: var(--accent);
+}
+@keyframes t-empty-in {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+}
+
+/* ---------- Attese (surface.css: .sf-orbit, .sf-dots, .sf-progress; surface-scroll.css: .sf-skeleton) ---------- */
+/* Anello: un cerchio tenue con un punto che gira */
+.t-spin {
+	position: relative;
+	display: inline-block;
+	flex: none;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	color: var(--tc, var(--accent));
+	box-shadow: inset 0 0 0 1.5px rgb(from var(--tc, var(--accent)) r g b / 22%);
+	animation: t-turn 0.9s linear infinite;
+}
+.t-spin::after {
+	content: '';
+	position: absolute;
+	left: 4.5px;
+	top: 0;
+	width: 3px;
+	height: 3px;
+	border-radius: 50%;
+	background: currentColor;
+}
+/* Tre puntini: qualcuno sta scrivendo */
+.t-dots {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	height: 17px;
+}
+.t-dots > i {
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: currentColor;
+	animation: t-dot 1.1s var(--ease) infinite;
+}
+.t-dots > i:nth-child(2) {
+	animation-delay: 0.15s;
+}
+.t-dots > i:nth-child(3) {
+	animation-delay: 0.3s;
+}
+@keyframes t-dot {
+	0%,
+	80%,
+	100% {
+		opacity: 0.25;
+		transform: scale(0.8);
+	}
+	40% {
+		opacity: 1;
+		transform: none;
+	}
+}
+/* Barra: <div class="t-progress" role="progressbar" style="--p: 40%"></div>; senza --p è indeterminata */
+.t-progress {
+	position: relative;
+	flex: 1;
+	min-width: 40px;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--l2);
+}
+.t-progress::before {
+	content: '';
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: var(--p, 30%);
+	border-radius: inherit;
+	background: var(--tc, var(--accent));
+	transition: width var(--dur-release) var(--out);
+}
+.t-progress:not([style*='--p'])::before {
+	animation: t-indet 1.3s var(--ease) infinite;
+}
+.t-progress.sm {
+	height: 2px;
+}
+.t-progress.lg {
+	height: 8px;
+}
+@keyframes t-indet {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(340%);
+	}
+}
+/* Scheletro: barrette al posto del testo, con un riflesso che le attraversa */
+.t-skel {
+	position: relative;
+	display: block;
+	height: 9px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: rgb(from var(--t3) r g b / 20%);
+}
+.t-skel::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent, rgb(from var(--t1) r g b / 14%), transparent);
+	transform: translateX(-100%);
+	animation: t-sweep 2s linear infinite;
+}
+.t-skel.dot {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+}
+.t-skel.block {
+	height: 72px;
+	border-radius: var(--r-card);
+}
+@keyframes t-sweep {
+	to {
+		transform: translateX(100%);
+	}
+}
+/* Parola che lavora: un riflesso scorre sul testo (tabs.css: .tt.working) */
+.t-working {
+	color: transparent;
+	background: linear-gradient(
+			90deg,
+			var(--t3) 0%,
+			var(--t3) 35%,
+			var(--t1) 50%,
+			var(--t3) 65%,
+			var(--t3) 100%
+		)
+		130% 0 / 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	animation: t-working 2.4s linear infinite;
+}
+@keyframes t-working {
+	0% {
+		background-position: 130% 0;
+	}
+	50%,
+	100% {
+		background-position: -30% 0;
+	}
+}
+
+/* ---------- Board (board.css) ---------- */
+.t-lane {
+	display: flex;
+	flex: none;
+	flex-direction: column;
+	border-radius: var(--r-card);
+	background: var(--bd-lane);
+}
+.t-lane-head {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 6px 0 12px;
+	font: 550 12.5px/1 var(--sans);
+	color: var(--t1);
+}
+.t-lane-head .t-count {
+	margin-right: auto;
+}
+.t-lane-body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 0 8px 8px;
+}
+/* La card della board: la superficie più viva, con ombra corta e anello */
+.t-tile {
+	position: relative;
+	display: flex;
+	flex: none;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 8px 10px 8px 8px;
+	border-radius: 9px;
+	font-size: 13px;
+	line-height: 1.4;
+	text-align: left;
+	text-decoration: none;
+	color: var(--t1);
+	background: var(--bd-card);
+	box-shadow:
+		0 0 0 1px var(--bd-ring),
+		var(--bd-shadow);
+	transition:
+		box-shadow var(--dur-state) var(--ease),
+		background var(--dur-state) var(--ease);
+}
+.t-tile:is(button, a, [tabindex]):hover {
+	background: var(--bd-card-hover);
+	text-decoration: none;
+	box-shadow:
+		0 0 0 1px var(--l3),
+		var(--bd-shadow-hover);
+	transition:
+		box-shadow 0s,
+		background 0s;
+}
+.t-tile:is(button, a, [tabindex]):active {
+	background: var(--bd-card-press);
+	transition: none;
+}
+.t-tile:is([aria-current], .cur) {
+	box-shadow:
+		0 0 0 1px rgb(from var(--accent) r g b / 50%),
+		var(--bd-shadow);
+}
+.t-tile:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-tile.done {
+	color: var(--t3);
+}
+.t-tile-main {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.t-tile-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+}
+/* Aggiungi: una riga quieta in fondo alla colonna */
+.t-add {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 8px;
+	border-radius: var(--r-ctl);
+	font-size: 12.5px;
+	color: var(--t3);
+	transition:
+		background var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease);
+}
+.t-add:hover {
+	color: var(--t1);
+	background: var(--l1);
+	transition:
+		background 0s,
+		color 0s;
+}
+.t-add:active {
+	background: var(--l2);
+}
+.t-add .ico {
+	width: 13px;
+	height: 13px;
+}

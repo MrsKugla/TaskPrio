@@ -1,6 +1,7 @@
 import { Handle, Position, useConnection, type Node, type NodeProps } from "@xyflow/react";
 import { haRischiAperti, type PrioritaEffettiva, type Task } from "../regole";
 import { ETICHETTE_PRIORITA, ETICHETTE_STATO, IconaFocus, Pallini } from "./aspetto";
+import { Icona, TERN } from "./schermo";
 
 export type NodoTask = Node<{ task: Task; effettiva: PrioritaEffettiva; bloccata: boolean }, "task">;
 
@@ -27,19 +28,20 @@ export function NodoTask({ id, data: { task, effettiva, bloccata }, selected }: 
         <span className="simboli">
           {alzata && (
             <span className="simbolo-alzata" role="img" aria-label="Priorità alzata" title="Priorità alzata dalle regole">
-              ↑
+              {TERN ? <Icona nome="arrow-up" /> : "↑"}
             </span>
           )}
           {bloccata && (
-            <span role="img" aria-label="Bloccata" title="Bloccata: dipende da una task non fatta">
-              🔒
+            <span className="simbolo-bloccata" role="img" aria-label="Bloccata" title="Bloccata: dipende da una task non fatta">
+              {TERN ? <Icona nome="lock" /> : "🔒"}
             </span>
           )}
           {haRischiAperti(task) && (
             <span className="simbolo-rischi" role="img" aria-label="Rischi aperti" title="Rischi aperti: ci sono rischi senza test o con test non ancora passati">
-              ⚠
+              {TERN ? <Icona nome="warn" /> : "⚠"}
             </span>
           )}
+          {/* tern-ui non ha un rombo: resta il segno ◆, colorato dal foglio tern. */}
           {task.atomica && (
             <span className="simbolo-atomica" role="img" aria-label="Atomica" title="Atomica">
               ◆

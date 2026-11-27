@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { COSTI_FOCUS, COSTI_TEMPO, PRIORITA, STATI, type Filtri, type Task } from "../regole";
 import { ETICHETTE_PRIORITA, ETICHETTE_STATO, ETICHETTE_TEMPO, IconaFocus } from "./aspetto";
+import { Icona, TERN } from "./schermo";
 
 type Props = {
   filtri: Filtri;
@@ -31,24 +32,26 @@ function GruppoFiltro<T extends string>(props: {
     <div className={`gruppo-filtro${aperto ? " aperto" : ""}${attivi.length > 0 ? " attivo" : ""}`}>
       <button
         type="button"
-        className="gruppo-filtro-tasto"
+        className="gruppo-filtro-tasto t-btn sm quiet"
         aria-expanded={aperto}
         aria-controls={idCaselle}
         onClick={() => setAperto(!aperto)}
       >
         <span className="gruppo-filtro-nome">{legenda}</span>
         {aperto
-          ? attivi.length > 0 && <span className="gruppo-filtro-conta">{attivi.length}</span>
+          ? attivi.length > 0 && <span className="gruppo-filtro-conta t-count">{attivi.length}</span>
           : attivi.map((v) => (
-              <span key={v} className="gruppo-filtro-chip">
+              <span key={v} className="gruppo-filtro-chip t-chip" data-tone="accent">
                 {etichetta(v)}
               </span>
             ))}
+        {TERN && <Icona nome={aperto ? "chev-l" : "chev-r"} />}
       </button>
       <div id={idCaselle} className="gruppo-filtro-caselle" role="group" aria-label={legenda} hidden={!aperto}>
         {valori.map((v) => (
-          <label key={v} className="scelta">
+          <label key={v} className="scelta t-opt">
             <input
+              className="t-check"
               type="checkbox"
               checked={scelti.includes(v)}
               onChange={(e) => onCambia(e.target.checked ? [...scelti, v] : scelti.filter((s) => s !== v))}
@@ -101,8 +104,10 @@ export function BarraFiltri({ filtri, onCambia, focus, onEsciDalFocus }: Props) 
           onCambia={cambia("stato")}
           etichetta={(s) => ETICHETTE_STATO[s]}
         />
-        <label className="scelta">
+        <label className="scelta t-opt">
           <input
+            className="t-switch"
+            role="switch"
             type="checkbox"
             checked={filtri.nascondiFatte}
             onChange={(e) => onCambia({ ...filtri, nascondiFatte: e.target.checked })}
@@ -111,8 +116,9 @@ export function BarraFiltri({ filtri, onCambia, focus, onEsciDalFocus }: Props) 
         </label>
       </fieldset>
       {focus && (
-        <button className="esci-focus" onClick={onEsciDalFocus} title="Torna al grafo completo con i filtri di prima">
-          Esci dal focus su «{focus.titolo}»
+        <button className="esci-focus t-btn sm" onClick={onEsciDalFocus} title="Torna al grafo completo con i filtri di prima">
+          <Icona nome="eye-off" />
+          {TERN ? <span className="esci-focus-testo">Esci dal focus su «{focus.titolo}»</span> : <>Esci dal focus su «{focus.titolo}»</>}
         </button>
       )}
     </div>

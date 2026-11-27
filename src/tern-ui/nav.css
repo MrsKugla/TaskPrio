@@ -1,0 +1,655 @@
+/*
+  tern-ui · navigazione
+  Schede, barre laterali, elenchi, alberi, briciole, pagine.
+
+  Come si mostra «scelto», secondo la forma della riga:
+  · riga arrotondata in una barra laterale → foglio bianco con anello e ombra corta (.t-nav-row)
+  · riga arrotondata in un elenco di contenuti → velo d'accento al 10% (.t-row)
+  · riga squadrata da bordo a bordo → velo d'accento più una barra d'accento di 2px a sinistra (.t-list.flush, .t-tree)
+  · riga dentro un pannello di vetro → fondo --l1 più una barretta sfumata (.t-cmdk-item, .t-mi)
+*/
+
+/* ---------- Schede a pillola (surface-nav.css: data-variant='pills') ---------- */
+.t-pills {
+	display: inline-flex;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 11px;
+	background: var(--l1);
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+.t-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 0 11px;
+	border-radius: var(--r-ctl);
+	font: 500 13px/1 var(--sans);
+	letter-spacing: -0.006em;
+	white-space: nowrap;
+	text-decoration: none;
+	/* Tern usa t3 (4:1): qui t2, che supera 4,5:1 */
+	color: var(--t2);
+	cursor: pointer;
+	transition:
+		color var(--dur-state) var(--ease),
+		background-color var(--dur-state) var(--ease),
+		box-shadow var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-pill:hover {
+	color: var(--t1);
+	background: var(--l1);
+	text-decoration: none;
+	transition:
+		color 0s,
+		background-color 0s,
+		box-shadow 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-pill:active {
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-pill:is([aria-selected='true'], [aria-current]) {
+	color: var(--t1);
+	background: light-dark(var(--card), var(--raise));
+	box-shadow:
+		var(--lift-thumb),
+		0 0 0 1px light-dark(var(--l1), var(--l2)),
+		var(--hi-on);
+}
+.t-pill:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-pill .ico {
+	width: 14px;
+	height: 14px;
+	color: var(--t3);
+}
+.t-pill:is(:hover, [aria-selected='true'], [aria-current]) .ico {
+	color: var(--t2);
+}
+/* Il contatore in una scheda è una pastiglia, e prende l'accento quando la scheda è scelta */
+:is(.t-pill, .t-link) .t-count {
+	min-width: 18px;
+	height: 17px;
+	margin-right: -3px;
+	padding: 0 5px;
+	border-radius: 999px;
+	font: 500 10.5px/17px var(--mono);
+	text-align: center;
+	color: var(--t2);
+	background: var(--chip-bg);
+}
+:is(.t-pill, .t-link):is([aria-selected='true'], [aria-current]) .t-count {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 14%);
+}
+
+/* ---------- Schede a link (surface-nav.css: data-variant='links') ---------- */
+.t-links {
+	display: flex;
+	gap: 4px;
+	box-shadow: inset 0 -1px 0 var(--l2);
+}
+.t-link {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 10px;
+	font: 500 13px/1 var(--sans);
+	letter-spacing: -0.006em;
+	white-space: nowrap;
+	text-decoration: none;
+	color: var(--t3);
+	cursor: pointer;
+	transition: color var(--dur-state) var(--ease);
+}
+.t-link:hover {
+	color: var(--t1);
+	text-decoration: none;
+	transition: color 0s;
+}
+.t-link::before {
+	content: '';
+	position: absolute;
+	left: 10px;
+	right: 10px;
+	bottom: 0;
+	height: 2px;
+	border-radius: 2px;
+	background: transparent;
+}
+.t-link:hover::before {
+	background: var(--l3);
+}
+.t-link:is([aria-selected='true'], [aria-current]) {
+	color: var(--t1);
+}
+.t-link:is([aria-selected='true'], [aria-current])::before {
+	background: var(--accent);
+}
+.t-link:focus-visible {
+	border-radius: var(--r-chip);
+	box-shadow: var(--sel-ring);
+}
+
+/* ---------- Barra laterale (base.css: .nav-head, .nav-row) ---------- */
+.t-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+.t-nav + .t-nav {
+	margin-top: 10px;
+}
+.t-nav-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	padding: 0 10px;
+	font: 500 12.5px/1 var(--sans);
+	color: var(--t3);
+}
+.t-nav-head .t-count {
+	margin-left: auto;
+}
+.t-nav-row {
+	position: relative;
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	height: 30px;
+	padding: 0 8px 0 10px;
+	border-radius: var(--r-ctl);
+	font-size: 13.5px;
+	white-space: nowrap;
+	text-decoration: none;
+	color: var(--t2);
+	cursor: pointer;
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-nav-row .ico {
+	width: 15px;
+	height: 15px;
+	color: var(--t3);
+	transition: color var(--dur-state) var(--ease);
+}
+.t-nav-row > span:not([class]) {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.t-nav-row:hover {
+	color: var(--t1);
+	background: var(--l1);
+	text-decoration: none;
+	transition:
+		background-color 0s,
+		color 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-nav-row:hover .ico {
+	color: var(--t2);
+	transition: color 0s;
+}
+.t-nav-row:active {
+	background: var(--l2);
+}
+.t-nav-row:is([aria-current], [aria-selected='true']) {
+	color: var(--t1);
+	background: light-dark(var(--card), rgba(255, 255, 255, 0.08));
+	box-shadow:
+		0 0 0 1px light-dark(var(--l1), transparent),
+		var(--lift-ctl),
+		var(--hi);
+}
+.t-nav-row:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-nav-row .t-count,
+.t-nav-row .t-kbd {
+	margin-left: auto;
+}
+.t-nav-row[aria-disabled='true'] {
+	opacity: 0.42;
+	pointer-events: none;
+}
+/* Una riga che arriva da fuori (base.css: rowIn + rowGlow): entra da sinistra e resta illuminata un attimo */
+.t-nav-row.arrive {
+	animation: t-row-in 0.7s var(--out) both;
+}
+.t-nav-row.arrive::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(
+		90deg,
+		rgb(from var(--accent) r g b / 16%),
+		rgb(from var(--accent) r g b / 0%)
+	);
+	pointer-events: none;
+	animation: t-row-glow 1.8s 0.3s var(--ease) both;
+}
+@keyframes t-row-in {
+	0% {
+		height: 0;
+		opacity: 0;
+		transform: translateX(-8px);
+	}
+	45% {
+		height: 30px;
+		opacity: 0;
+		transform: translateX(-8px);
+	}
+	100% {
+		height: 30px;
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes t-row-glow {
+	to {
+		opacity: 0;
+	}
+}
+
+/* ---------- Righe di elenco (surface-list.css: .sf-item) ---------- */
+.t-list {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+.t-group {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 26px;
+	padding: 0 10px;
+	font: var(--text-meta);
+	color: var(--t3);
+}
+.t-row {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	gap: 9px;
+	width: 100%;
+	min-width: 0;
+	padding: 6px 10px;
+	border-radius: var(--r-ctl);
+	text-align: left;
+	text-decoration: none;
+	color: var(--t2);
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease);
+}
+.t-row:is(a, button, [role='option'], [tabindex]) {
+	cursor: pointer;
+}
+.t-row:is(a, button, [role='option'], [tabindex]):hover {
+	color: var(--t1);
+	background: var(--l1);
+	text-decoration: none;
+	transition:
+		background-color 0s,
+		color 0s;
+}
+.t-row:is(a, button, [role='option'], [tabindex]):active {
+	background: var(--l2);
+}
+.t-row:is([aria-selected='true'], [aria-current]),
+.t-row:is([aria-selected='true'], [aria-current]):hover {
+	color: var(--t1);
+	background: var(--sel);
+}
+.t-row:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-row .ico {
+	width: 14px;
+	height: 14px;
+	margin-top: 2px;
+	color: var(--t3);
+}
+.t-row[data-tone] .ico {
+	color: var(--tc);
+}
+.t-row:is([aria-selected='true'], [aria-current]):not([data-tone]) .ico {
+	color: var(--accent-ink);
+}
+.t-row:is([aria-selected='true'], [aria-current]) .t-row-sub {
+	color: var(--t2);
+}
+.t-row[aria-disabled='true'] {
+	color: var(--t3);
+	pointer-events: none;
+}
+.t-row:is([aria-selected='true'], [aria-current]) .t-count {
+	color: var(--t2);
+}
+.t-row-main {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+.t-row-title {
+	font-size: 13px;
+	line-height: 18px;
+	overflow-wrap: anywhere;
+}
+.t-row-sub {
+	font-size: 12px;
+	line-height: 16px;
+	color: var(--t3);
+	overflow-wrap: anywhere;
+}
+.t-row-side {
+	flex: none;
+	margin-top: 1px;
+}
+/* Una riga sola, fitta: 24px, testo troncato */
+.t-list.dense > .t-row {
+	align-items: center;
+	height: 24px;
+	padding: 0 8px 0 10px;
+	white-space: nowrap;
+}
+.t-list.dense > .t-row .ico {
+	margin-top: 0;
+}
+.t-list.dense .t-row-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	overflow-wrap: normal;
+}
+/* Da bordo a bordo: righe squadrate, e la scelta porta la barra d'accento */
+.t-list.flush {
+	gap: 0;
+}
+.t-list.flush > .t-row {
+	border-radius: 0;
+}
+.t-list.flush > .t-row:is([aria-selected='true'], [aria-current]) {
+	box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* ---------- Albero (tree.css) ---------- */
+/*
+  <div class="t-tree">
+    <details open><summary class="t-tree-row"><svg class="ico tw">…chev…</svg><svg class="ico">…</svg><span>src</span></summary>
+      <div class="t-tree-kids"><a class="t-tree-row" aria-current="true">…</a></div>
+    </details>
+  </div>
+*/
+.t-tree {
+	--d: 0;
+	display: flex;
+	flex-direction: column;
+	padding: 6px 0;
+}
+.t-tree-kids {
+	display: flex;
+	flex-direction: column;
+}
+.t-tree-kids > :is(.t-tree-row, details) {
+	--d: 1;
+}
+.t-tree-kids .t-tree-kids > :is(.t-tree-row, details) {
+	--d: 2;
+}
+.t-tree-kids .t-tree-kids .t-tree-kids > :is(.t-tree-row, details) {
+	--d: 3;
+}
+.t-tree-kids .t-tree-kids .t-tree-kids .t-tree-kids > :is(.t-tree-row, details) {
+	--d: 4;
+}
+.t-tree-kids .t-tree-kids .t-tree-kids .t-tree-kids .t-tree-kids > :is(.t-tree-row, details) {
+	--d: 5;
+}
+.t-tree-kids
+	.t-tree-kids
+	.t-tree-kids
+	.t-tree-kids
+	.t-tree-kids
+	.t-tree-kids
+	> :is(.t-tree-row, details) {
+	--d: 6;
+}
+.t-tree-row {
+	position: relative;
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 7px;
+	width: 100%;
+	height: 24px;
+	padding: 0 10px 0 calc(10px + var(--d) * 14px);
+	font-size: 12.5px;
+	white-space: nowrap;
+	text-decoration: none;
+	list-style: none;
+	color: var(--t2);
+	/* Le guide di rientro: un filo ogni 14px, quanti sono i livelli */
+	background-image: repeating-linear-gradient(90deg, var(--l2) 0 1px, transparent 1px 14px);
+	background-repeat: no-repeat;
+	background-position: 15px 0;
+	background-size: calc(var(--d) * 14px) 100%;
+	cursor: pointer;
+	transition: background-color var(--dur-state) var(--ease);
+}
+.t-tree-row::-webkit-details-marker {
+	display: none;
+}
+.t-tree-row:hover {
+	color: var(--t1);
+	background-color: var(--l1);
+	text-decoration: none;
+	transition: background-color 0s;
+}
+.t-tree-row:active {
+	background-color: var(--l2);
+}
+.t-tree-row .ico {
+	width: 14px;
+	height: 14px;
+	color: var(--t3);
+}
+.t-tree-row .ico.tw {
+	width: 10px;
+	height: 10px;
+	color: var(--t4);
+	transform: rotate(-90deg);
+	transition: transform var(--dur-turn) var(--out);
+}
+details[open] > .t-tree-row .ico.tw {
+	transform: none;
+}
+/* Una foglia non ha la freccia: rientra di quanto occupa */
+:is(a, button).t-tree-row {
+	padding-left: calc(27px + var(--d) * 14px);
+}
+.t-tree-row > span:not([class]) {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.t-tree-row .t-count {
+	font-size: 11px;
+	color: var(--t3);
+}
+.t-tree-row:is([aria-current], [aria-selected='true']) {
+	color: var(--t1);
+	background-color: rgb(from var(--accent) r g b / 10%);
+	box-shadow: inset 2px 0 0 var(--accent);
+}
+.t-tree-row:is([aria-current], [aria-selected='true']) .ico:not(.tw) {
+	color: var(--accent);
+}
+.t-tree-row:focus-visible {
+	box-shadow:
+		inset 2px 0 0 var(--accent),
+		inset 0 0 0 1px rgb(from var(--accent) r g b / 45%);
+}
+
+/* ---------- Briciole (surface-breadcrumb.css) ---------- */
+.t-crumbs {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font: var(--text-ui);
+}
+.t-crumbs > li {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+/* Il separatore è una freccia disegnata, non un carattere */
+.t-crumbs > li + li::before {
+	content: '';
+	flex: none;
+	width: 14px;
+	height: 12px;
+	background: var(--t4);
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6.25 4.5 3.5 3.5-3.5 3.5'/%3E%3C/svg%3E")
+		center / 12px no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6.25 4.5 3.5 3.5-3.5 3.5'/%3E%3C/svg%3E")
+		center / 12px no-repeat;
+}
+.t-crumb {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	height: 24px;
+	padding: 0 6px;
+	border-radius: var(--r-chip);
+	white-space: nowrap;
+	text-decoration: none;
+	color: var(--t3);
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-crumb:is(a, button):hover {
+	color: var(--t1);
+	background: var(--l2);
+	text-decoration: none;
+	transition-duration: 0s, 0s, var(--dur-release);
+}
+.t-crumb:is(a, button):active {
+	background: var(--l3);
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-crumb[aria-current] {
+	font-weight: 500;
+	color: var(--t1);
+}
+.t-crumb .ico {
+	width: 14px;
+	height: 14px;
+}
+.t-crumbs.path {
+	font: 12.5px/18px var(--mono);
+	letter-spacing: 0;
+}
+.t-crumbs.path .t-crumb {
+	height: 22px;
+	padding: 0 4px;
+}
+
+/* ---------- Pagine (surface-pager.css) ---------- */
+.t-pager {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	min-height: 28px;
+	font: 400 12.5px/16px var(--sans);
+	color: var(--t2);
+}
+.t-page {
+	display: grid;
+	flex: none;
+	place-items: center;
+	min-width: 28px;
+	height: 28px;
+	padding: 0 7px;
+	border-radius: var(--r-ctl);
+	font: 500 12.5px/1 var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	text-decoration: none;
+	color: var(--t2);
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		box-shadow var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-page:hover {
+	color: var(--t1);
+	background: var(--l1);
+	text-decoration: none;
+	transition-duration: 0s, 0s, 0s, var(--dur-release);
+}
+.t-page:active {
+	transform: scale(0.94);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-page[aria-current] {
+	font-weight: 600;
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 13%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--accent) r g b / 24%);
+}
+.t-page:is(:disabled, [aria-disabled='true']) {
+	color: var(--t4);
+	pointer-events: none;
+}
+.t-page .ico {
+	width: 15px;
+	height: 15px;
+}
+.t-page:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-pager-gap {
+	display: grid;
+	place-items: center;
+	min-width: 20px;
+	color: var(--t4);
+}
+.t-pager-range {
+	margin-right: auto;
+	font: 12.5px/16px var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+.t-pager-range b {
+	font-weight: 500;
+	color: var(--t1);
+}

@@ -1,0 +1,1582 @@
+/*
+  tern-ui · controlli
+  Bottoni, campi, caselle, interruttori, segmenti, cursori.
+  Ogni blocco dice da quale foglio di Tern 0.9.34 viene.
+
+  La regola del passaggio del mouse, uguale ovunque: lo stato entra subito (transition 0s) ed esce
+  in 150 ms con --ease; il clic stringe a 0,97 in 100 ms e torna in 300 ms con --out.
+*/
+
+/* ---------- Bottoni (surface-controls.css: .sf-button; base.css: .btn) ---------- */
+.t-btn {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: var(--h-md);
+	padding: 0 10px;
+	border: 0;
+	border-radius: var(--r-ctl);
+	font: 500 12.5px/1 var(--sans);
+	letter-spacing: var(--track);
+	white-space: nowrap;
+	text-decoration: none;
+	color: var(--t2);
+	background: var(--chip-bg);
+	box-shadow: inset 0 0 0 1px var(--l2);
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		box-shadow var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-btn:hover {
+	color: var(--t1);
+	background: var(--l2);
+	text-decoration: none;
+	transition:
+		background-color 0s,
+		color 0s,
+		box-shadow 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-btn:active {
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-btn:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-btn .ico {
+	width: 14px;
+	height: 14px;
+}
+/* L'icona davanti a una parola rientra di 2px: otticamente pesa meno del testo */
+.t-btn > .ico:first-child:not(:only-child) {
+	margin-left: -2px;
+}
+
+/* Misure: 22 nelle righe fitte, 28 di norma, 32 nelle pagine di impostazioni e nelle finestre */
+.t-btn.sm {
+	gap: 5px;
+	height: var(--h-sm);
+	padding: 0 8px;
+	border-radius: var(--r-chip);
+	font-size: 12px;
+}
+.t-btn.sm .ico {
+	width: 12px;
+	height: 12px;
+}
+.t-btn.lg {
+	gap: 7px;
+	height: var(--h-lg);
+	padding: 0 12px;
+	font-size: 13.5px;
+}
+.t-btn.icon {
+	width: var(--h-md);
+	padding: 0;
+}
+.t-btn.icon.sm {
+	width: var(--h-sm);
+}
+.t-btn.icon.lg {
+	width: var(--h-lg);
+}
+
+/* In rilievo: il bottone della cornice dell'app (base.css: .btn). Fondo pieno, ombra corta nel chiaro, filo di luce nello scuro. */
+.t-btn.raised {
+	color: var(--t1);
+	background: light-dark(var(--card), var(--raise));
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		var(--lift-ctl),
+		var(--hi);
+}
+.t-btn.raised:hover {
+	background: light-dark(var(--card), var(--raise));
+	box-shadow:
+		inset 0 0 0 1px var(--l3),
+		var(--lift-ctl),
+		var(--hi);
+}
+
+/* Primario: uno per vista. Sfumatura azzurra, inchiostro scuro, alone d'accento sotto. */
+.t-btn.primary {
+	color: var(--grad-ink);
+	background: var(--grad);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.18),
+		0 6px 16px -8px rgb(from var(--accent) r g b / 80%);
+}
+.t-btn.primary:hover {
+	color: var(--grad-ink);
+	background: var(--grad);
+	box-shadow:
+		inset 0 0 0 1px var(--l3),
+		0 6px 16px -8px rgb(from var(--accent) r g b / 80%);
+}
+
+/* Quieto: nessun contorno finché non ci passi sopra. Barre degli strumenti, azioni secondarie. */
+.t-btn.quiet {
+	background: transparent;
+	box-shadow: none;
+}
+.t-btn.quiet:hover {
+	background: var(--l1);
+}
+.t-btn.quiet:active {
+	background: var(--l2);
+}
+
+.t-btn.danger {
+	color: var(--bad-ink);
+	background: rgb(from var(--bad) r g b / 8%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--bad) r g b / 22%);
+}
+.t-btn.danger:hover {
+	color: var(--bad-ink);
+	background: rgb(from var(--bad) r g b / 14%);
+}
+
+/* Acceso: un bottone a interruttore premuto */
+.t-btn:is([aria-pressed='true'], [aria-expanded='true'].quiet, .on) {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 10%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--accent) r g b / 25%);
+}
+
+.t-btn:is(.primary, .danger, .raised, [aria-pressed='true']):focus-visible,
+.t-btn.quiet:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+
+.t-btn:is(:disabled, [aria-disabled='true']) {
+	opacity: 0.45;
+	transform: none;
+	cursor: default;
+	pointer-events: none;
+}
+.t-btn:is(:disabled, [aria-disabled='true']):not(.primary, .danger, .quiet) {
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+
+/* In attesa: l'etichetta resta, davanti gira un anello (dialog.css: .mdl-go.busy) */
+.t-btn[aria-busy='true'] {
+	pointer-events: none;
+	transform: none;
+}
+.t-btn[aria-busy='true']:not(.primary) {
+	color: var(--t3);
+}
+.t-btn[aria-busy='true']::before {
+	content: '';
+	width: 12px;
+	height: 12px;
+	border: 1.5px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 50%;
+	animation: t-turn 0.7s linear infinite;
+}
+.t-btn[aria-busy='true'] > .ico:first-child {
+	display: none;
+}
+@keyframes t-turn {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Tasto dentro un bottone */
+.t-btn .t-kbd {
+	min-width: 16px;
+	height: 16px;
+	margin-right: -4px;
+	padding: 0 4px;
+	font-size: 10px;
+	opacity: 0.8;
+}
+.t-btn.primary .t-kbd {
+	color: inherit;
+	background: rgb(from var(--grad-ink) calc(255 - r) calc(255 - g) calc(255 - b) / 22%);
+	box-shadow: none;
+	opacity: 1;
+}
+
+/* ---------- Gruppi di bottoni (surface-buttons.css) ---------- */
+.t-btns {
+	display: inline-flex;
+	flex: none;
+	align-items: stretch;
+	border-radius: var(--r-ctl);
+}
+/* Uniti: un solo contorno, fili verticali tra un bottone e l'altro */
+.t-btns.joined {
+	background: var(--chip-bg);
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		0 1px 2px -1px rgb(from var(--t1) r g b / 8%);
+}
+.t-btns.joined > .t-btn {
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+.t-btns.joined > .t-btn:first-child {
+	border-radius: var(--r-ctl) 0 0 var(--r-ctl);
+}
+.t-btns.joined > .t-btn:last-child {
+	border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+}
+.t-btns.joined > .t-btn + .t-btn {
+	box-shadow: inset 1px 0 0 var(--l2);
+}
+.t-btns.joined > .t-btn:hover {
+	background: var(--l2);
+}
+.t-btns.joined > .t-btn:active {
+	transform: none;
+	background: var(--l3);
+}
+.t-btns.joined > .t-btn:is([aria-pressed='true'], .on) {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 12%);
+}
+.t-btns.joined > .t-btn:focus-visible {
+	position: relative;
+	z-index: 1;
+	border-radius: var(--r-ctl);
+	box-shadow: var(--sel-ring);
+}
+/* Barra degli strumenti: una vaschetta con bottoni senza contorno */
+.t-btns.toolbar {
+	gap: 4px;
+	padding: 3px;
+	border-radius: 10px;
+	background: rgb(from var(--t1) r g b / 5%);
+	box-shadow: inset 0 0 0 1px rgb(from var(--t1) r g b / 4%);
+}
+.t-btns.toolbar > .t-btn {
+	height: 26px;
+	padding: 0 8px;
+	border-radius: var(--r-chip);
+	color: var(--t3);
+	background: transparent;
+	box-shadow: none;
+}
+.t-btns.toolbar > .t-btn.icon {
+	width: 26px;
+	padding: 0;
+}
+.t-btns.toolbar > .t-btn:hover {
+	color: var(--t1);
+	background: var(--l2);
+}
+.t-btns.toolbar > .t-btn:active {
+	transform: none;
+	background: var(--l3);
+}
+.t-btns.toolbar > .t-btn:is([aria-pressed='true'], .on) {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 14%);
+}
+.t-btns.toolbar > .t-btn:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+
+/* ---------- Campi (surface-field.css: .sf-field; controls.css: .fld, .sel-btn) ---------- */
+.t-input,
+.t-textarea,
+.t-select,
+.t-fld {
+	width: 100%;
+	min-width: 0;
+	border: 0;
+	border-radius: var(--r-ctl);
+	font: var(--text-ui);
+	letter-spacing: var(--track);
+	color: var(--t1);
+	background-color: light-dark(var(--card), rgba(255, 255, 255, 0.045));
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		0 1px 1px light-dark(rgba(0, 0, 0, 0.03), transparent);
+	transition: box-shadow var(--dur-state) var(--ease);
+}
+.t-input,
+.t-select,
+.t-fld {
+	height: var(--h-md);
+	padding: 0 10px;
+}
+.t-input.lg,
+.t-select.lg,
+.t-fld.lg {
+	height: var(--h-lg);
+}
+.t-input:hover,
+.t-textarea:hover,
+.t-select:hover,
+.t-fld:hover {
+	box-shadow:
+		inset 0 0 0 1px var(--l3),
+		0 1px 1px light-dark(rgba(0, 0, 0, 0.03), transparent);
+	transition: box-shadow 0s;
+}
+/* In scrittura: filo d'accento al 55% dentro, alone al 13% fuori. Più quieto dell'anello da tastiera. */
+.t-input:focus,
+.t-textarea:focus,
+.t-fld:focus-within {
+	box-shadow: var(--field-ring);
+}
+.t-input.mono,
+.t-textarea.mono,
+.t-fld.mono input {
+	font-family: var(--mono);
+	font-size: 12.5px;
+	letter-spacing: 0;
+}
+.t-input.num,
+.t-fld.num input {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.t-textarea {
+	display: block;
+	min-height: 76px;
+	padding: 6px 10px;
+	line-height: 20px;
+	resize: vertical;
+	field-sizing: content;
+}
+.t-input:is(:disabled, [aria-disabled='true']),
+.t-textarea:disabled,
+.t-select:disabled,
+.t-fld:has(input:disabled) {
+	opacity: 0.5;
+	pointer-events: none;
+}
+.t-input:read-only:not(:disabled),
+.t-textarea:read-only:not(:disabled) {
+	background-color: var(--l1);
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+.t-input[aria-invalid='true'],
+.t-textarea[aria-invalid='true'],
+.t-select[aria-invalid='true'],
+.t-fld:has([aria-invalid='true']) {
+	box-shadow: inset 0 0 0 1px rgb(from var(--bad) r g b / 60%);
+}
+.t-input[aria-invalid='true']:focus,
+.t-textarea[aria-invalid='true']:focus,
+.t-fld:has([aria-invalid='true']):focus-within {
+	box-shadow: var(--field-bad);
+}
+
+/* Scelta: sembra un bottone in rilievo, perché apre qualcosa (controls.css: .sel-btn) */
+.t-select {
+	appearance: none;
+	padding-right: 28px;
+	background-color: light-dark(var(--card), var(--raise));
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%237b7d85' stroke-width='1.45' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.25 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 7px center;
+	background-size: 13px;
+	box-shadow:
+		inset 0 0 0 1px var(--l2),
+		var(--lift-ctl),
+		var(--hi);
+	cursor: pointer;
+}
+.t-select:hover {
+	box-shadow:
+		inset 0 0 0 1px var(--l3),
+		var(--lift-ctl),
+		var(--hi);
+}
+.t-select:focus-visible {
+	box-shadow:
+		var(--sel-ring),
+		inset 0 0 0 1px var(--l2);
+}
+
+/* ---------- Scelta con menu e ricerca (controls.css: .sel-btn, .kit-controlled-select, .pop.sel-menu) ---------- */
+/*
+  Si scrive un <select class="t-select"> normale. tern-ui.js lo avvolge in un contenitore che prende le sue
+  stesse classi (quindi anche le regole di pagina scritte per .t-select: larghezze, misure), lo lascia dentro
+  invisibile come fonte del valore e come misura della larghezza, e gli mette sopra bottone e menu.
+  Moduli, <label>, change e disabled restano quelli del <select>. Senza script, o sul tocco, si vede il
+  <select> con lo stile qui sopra e il menu del sistema.
+
+    <select class="t-select">            varianti: lg, sm, quiet, mono
+    <select class="t-select" data-search>          il campo di ricerca c'è già all'apertura (elenchi lunghi)
+    <select class="t-select" data-search="false">  niente ricerca
+    <option data-detail="UTC+1" data-icon="globe">  dettaglio a destra, icona davanti
+
+  A menu aperto basta scrivere: il bottone diventa il campo, l'elenco si restringe, le lettere trovate si accendono.
+*/
+.t-select.sm {
+	height: 26px;
+	padding: 0 24px 0 8px;
+	border-radius: 7px;
+	font-size: 12.5px;
+	background-position: right 5px center;
+	background-size: 12px;
+}
+/* Quieta: senza contorno finché non ci passi sopra. Per barre e testate. */
+.t-select.quiet {
+	font-weight: 500;
+	background-color: transparent;
+	box-shadow: none;
+}
+.t-select.quiet:hover {
+	background-color: var(--l1);
+	box-shadow: none;
+}
+
+.t-sel {
+	position: relative;
+	display: inline-flex;
+	align-items: stretch;
+	padding: 0;
+	vertical-align: middle;
+	cursor: default;
+}
+.t-sel.sm {
+	padding: 0;
+}
+/* Il <select> vero resta dov'era, invisibile e fuori dal giro del Tab: un modulo lo trova e lo convalida */
+select.t-select[data-t-select] {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	opacity: 0;
+	clip-path: inset(50%);
+	pointer-events: none;
+}
+.t-sel-btn {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	gap: 7px;
+	min-width: 0;
+	padding: 0 28px 0 10px;
+	border-radius: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	white-space: nowrap;
+	text-align: left;
+	color: inherit;
+	cursor: default;
+}
+.t-sel.sm > .t-sel-btn {
+	gap: 5px;
+	padding: 0 24px 0 8px;
+}
+.t-sel-btn:focus-visible {
+	box-shadow: none;
+}
+.t-sel:has(> .t-sel-btn:focus-visible) {
+	box-shadow:
+		var(--sel-ring),
+		inset 0 0 0 1px var(--l2);
+}
+.t-sel:has(> .t-sel-btn:active) {
+	background-color: light-dark(var(--well), var(--l2));
+	transition: none;
+}
+/* Aperta: lo stesso anello del campo in scrittura */
+.t-sel.open,
+.t-sel.open:hover {
+	box-shadow: var(--field-ring);
+}
+.t-sel.quiet:has(> .t-sel-btn:focus-visible) {
+	box-shadow: var(--sel-ring);
+}
+.t-sel.quiet:is(.open, :has(> .t-sel-btn:active)),
+.t-sel.quiet.open:hover {
+	background-color: var(--l2);
+	box-shadow: none;
+}
+.t-sel[data-disabled] {
+	opacity: 0.5;
+	pointer-events: none;
+}
+.t-sel[data-invalid]:not(.open) {
+	box-shadow: inset 0 0 0 1px rgb(from var(--bad) r g b / 60%);
+}
+/* Il valore e, sotto, invisibili, tutte le voci: così la scelta è larga quanto la più lunga, come un <select> */
+.t-sel-v {
+	display: grid;
+	flex: 1;
+	grid-template-columns: minmax(0, 1fr);
+	min-width: 0;
+}
+.t-sel-now {
+	grid-area: 1 / 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.t-sel-now.ph {
+	color: var(--t3);
+}
+.t-sel-size {
+	grid-area: 1 / 1;
+	display: block;
+	height: 0;
+	overflow: hidden;
+	visibility: hidden;
+}
+.t-sel-size > span {
+	display: block;
+}
+.t-sel-btn > .ico {
+	width: 14px;
+	height: 14px;
+	color: var(--t2);
+}
+.t-sel.mono .t-sel-v {
+	font-family: var(--mono);
+	font-size: 12px;
+	letter-spacing: 0;
+}
+
+/* Mentre si cerca, il bottone è il campo: lente, ciò che scrivi, quante ne restano. È largo almeno 232px:
+   se la scelta è più stretta le sporge sopra, verso destra o, se a destra non c'è posto, verso sinistra (.end). */
+.t-sel-search {
+	position: absolute;
+	top: 0;
+	left: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	height: 100%;
+	padding: 0 10px 0 9px;
+	border-radius: inherit;
+	overflow: hidden;
+	color: var(--t3);
+	background: light-dark(var(--card), var(--raise));
+	box-shadow: var(--field-ring);
+	opacity: 0;
+	pointer-events: none;
+	cursor: text;
+}
+.t-sel.searching > .t-sel-search {
+	width: auto;
+	min-width: max(100%, 232px);
+	opacity: 1;
+	pointer-events: auto;
+}
+.t-sel.end > .t-sel-search {
+	right: 0;
+	left: auto;
+}
+.t-sel-search > .ico,
+.t-sel-find > .ico {
+	width: 14px;
+	height: 14px;
+}
+.t-sel-search > input,
+.t-sel-find > input {
+	flex: 1 1 auto;
+	width: 0;
+	min-width: 0;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	font: var(--text-ui);
+	letter-spacing: var(--track);
+	color: var(--t1);
+	background: none;
+}
+.t-sel-search > input:focus-visible,
+.t-sel-find > input:focus-visible {
+	box-shadow: none;
+}
+.t-sel-count {
+	flex: none;
+	padding-left: 2px;
+	font: 11.5px var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+
+/* Il menu: vetro, come gli altri pannelli che galleggiano. Sta nel livello più alto (popover), anche sopra una finestra. */
+.t-sel-menu {
+	position: fixed;
+	inset: auto;
+	z-index: var(--z-pop);
+	min-width: 160px;
+	max-width: calc(100vw - 16px);
+	margin: 0;
+	padding: 4px;
+	border: 0;
+	border-radius: var(--r-card);
+	overflow: visible;
+	font: var(--text-ui);
+	letter-spacing: var(--track);
+	white-space: nowrap;
+	text-align: left;
+	color: var(--t1);
+	background: var(--pop-bg);
+	-webkit-backdrop-filter: var(--pop-filter);
+	backdrop-filter: var(--pop-filter);
+	box-shadow: var(--pop-shadow);
+	transform-origin: 0 0;
+	cursor: default;
+}
+.t-sel-menu:not(:popover-open) {
+	display: none;
+}
+.t-sel-menu:popover-open {
+	animation: t-sel-in var(--dur-pop) var(--out);
+}
+.t-sel-menu.up {
+	transform-origin: 0 100%;
+}
+/* Esce solo in dissolvenza, più in fretta di come entra */
+.t-sel-menu.out {
+	animation: t-sel-out var(--dur-exit) var(--ease) both;
+	pointer-events: none;
+}
+@keyframes t-sel-in {
+	from {
+		opacity: 0;
+		transform: scale(0.97) translateY(-3px);
+	}
+}
+@keyframes t-sel-out {
+	to {
+		opacity: 0;
+	}
+}
+.t-sel-rows,
+.t-sel-rows > [role='group'],
+.t-sel-group,
+.t-sel-empty {
+	display: block;
+}
+.t-sel-rows {
+	position: relative;
+}
+/* Campo di ricerca in cima al menu: per la variante quieta, dove il bottone è solo una parola */
+.t-sel-find {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 216px;
+	height: 30px;
+	margin-bottom: 4px;
+	padding: 0 10px 0 9px;
+	border-radius: var(--r-ctl);
+	color: var(--t3);
+	background: var(--l1);
+	box-shadow: inset 0 0 0 1px var(--l1);
+	cursor: text;
+}
+.t-sel-rows {
+	min-width: 152px;
+	max-height: min(312px, var(--t-sel-max, 312px));
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior-y: contain;
+}
+.t-sel-opt {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	height: 30px;
+	padding: 0 10px 0 8px;
+	border-radius: var(--r-chip);
+	color: var(--t1);
+	-webkit-user-select: none;
+	user-select: none;
+}
+/* La voce attiva, col mouse o con le frecce, ha lo stesso fondo: dentro un menu il fuoco non è un anello */
+.t-sel-opt.active {
+	background: var(--l1);
+}
+.t-sel-opt.active:active {
+	background: var(--l2);
+}
+/* La spunta d'accento sta davanti; le voci non scelte tengono lo stesso posto vuoto, così il testo resta allineato */
+.t-sel-ck {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 14px;
+	height: 14px;
+	margin-right: -3px;
+	color: var(--accent-ink);
+}
+.t-sel-ck .ico {
+	width: 13px;
+	height: 13px;
+	stroke-width: 1.9;
+}
+.t-sel-opt:not([aria-selected='true']) .t-sel-ck .ico {
+	visibility: hidden;
+}
+.t-sel-opt > .ico {
+	width: 14px;
+	height: 14px;
+	color: var(--t2);
+}
+.t-sel-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.t-sel-opt mark {
+	border-radius: 3px;
+	color: inherit;
+	background: rgb(from var(--accent) r g b / 16%);
+	box-shadow: 0 0 0 1px rgb(from var(--accent) r g b / 10%);
+}
+.t-sel-opt.active mark {
+	background: rgb(from var(--accent) r g b / 24%);
+}
+.t-sel-sub {
+	margin-left: auto;
+	padding-left: 18px;
+	font: 12px var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+/* Sul fondo della voce attiva t3 scende a 3,7:1 nello scuro */
+.t-sel-opt.active .t-sel-sub {
+	color: var(--t2);
+}
+.t-sel-opt[aria-disabled='true'],
+.t-sel-opt[aria-disabled='true'] :is(.ico, .t-sel-sub) {
+	color: var(--t4);
+}
+.t-sel-group {
+	padding: 8px 10px 3px;
+	font: 500 11.5px/1.4 var(--sans);
+	color: var(--t3);
+}
+.t-sel-rows > [role='group']:first-child > .t-sel-group {
+	padding-top: 3px;
+}
+.t-sel-empty {
+	padding: 7px 10px;
+	font-size: 12.5px;
+	color: var(--t3);
+}
+.t-sel-menu.sm .t-sel-opt {
+	height: 26px;
+	font-size: 12.5px;
+}
+.t-sel-menu.sm .t-sel-sub {
+	font-size: 11.5px;
+}
+.t-sel-menu.mono .t-sel-text {
+	font-family: var(--mono);
+	font-size: 12px;
+	letter-spacing: 0;
+}
+/* Nella variante quieta la voce scelta prende il velo d'accento, come una riga di elenco */
+.t-sel-menu.quiet .t-sel-opt[aria-selected='true'] {
+	color: var(--accent-ink);
+	background: rgb(from var(--accent) r g b / 10%);
+}
+.t-sel-menu.quiet .t-sel-opt[aria-selected='true'].active {
+	background: rgb(from var(--accent) r g b / 15%);
+}
+
+/* Campo composto: icona, input, unità, tasto, bottone per svuotare (controls.css: .fld) */
+.t-fld {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 8px 0 10px;
+	color: var(--t3);
+	cursor: text;
+}
+.t-fld > input {
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--t1);
+}
+.t-fld > input:focus-visible {
+	box-shadow: none;
+}
+.t-fld > .ico {
+	width: 14px;
+	height: 14px;
+}
+.t-fld:focus-within > .ico:first-child {
+	color: var(--t2);
+}
+.t-fld-unit {
+	flex: none;
+	font: 12px var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	color: var(--t3);
+}
+.t-fld-x {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	margin-right: -3px;
+	border-radius: 50%;
+	color: var(--t3);
+	background: var(--l2);
+	transition:
+		background-color var(--dur-state) var(--ease),
+		color var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+.t-fld-x:hover {
+	color: var(--t1);
+	background: var(--l3);
+	transition:
+		background-color 0s,
+		color 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-fld-x:active {
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-fld-x .ico {
+	width: 10px;
+	height: 10px;
+	stroke-width: 2;
+}
+.t-fld:has(input:placeholder-shown) .t-fld-x,
+.t-fld:has(input:not(:placeholder-shown)) > .t-kbd,
+.t-fld:focus-within > .t-kbd {
+	display: none;
+}
+
+/* Ricerca incassata: senza contorno, per le barre laterali (tabs.css: .tn-vt-find) */
+.t-find {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 30px;
+	padding: 0 10px;
+	border-radius: var(--r-ctl);
+	color: var(--t3);
+	background: var(--l1);
+	transition: box-shadow var(--dur-state) var(--ease);
+}
+.t-find input {
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-size: 12.5px;
+	color: var(--t1);
+}
+.t-find input:focus-visible {
+	box-shadow: none;
+}
+.t-find .ico {
+	width: 13px;
+	height: 13px;
+}
+.t-find:focus-within {
+	box-shadow: inset 0 0 0 1px rgb(from var(--accent) r g b / 45%);
+}
+
+/* ---------- Etichetta, controllo, nota (surface-field.css) ---------- */
+.t-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.t-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font: var(--text-label);
+	color: var(--t1);
+}
+.t-label .req {
+	margin-left: -3px;
+	color: var(--bad-ink);
+}
+.t-note {
+	font: var(--text-small);
+	color: var(--t3);
+	overflow-wrap: anywhere;
+}
+/* L'errore sta sotto il campo, dice cosa non va, e arriva scendendo di 3px */
+.t-note.bad,
+.t-field:has([aria-invalid='true']) > .t-note {
+	color: var(--bad-ink);
+	animation: t-note-in var(--dur-pop) var(--out);
+}
+.t-note.warn {
+	color: var(--warn-ink);
+}
+@keyframes t-note-in {
+	from {
+		opacity: 0;
+		transform: translateY(-3px);
+	}
+}
+/* In riga: etichetta e nota a sinistra, controllo a destra; un filo tra una riga e l'altra */
+.t-field.row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: 24px;
+	row-gap: 2px;
+	min-height: 52px;
+	padding: 10px 0;
+}
+.t-field.row > .t-label {
+	grid-column: 1;
+	font-size: 13px;
+	line-height: 18px;
+}
+.t-field.row > .t-note {
+	grid-column: 1;
+	grid-row: 2;
+}
+.t-field.row > :not(.t-label, .t-note) {
+	grid-column: 2;
+	grid-row: 1 / 3;
+	justify-self: end;
+}
+.t-field.row > :is(.t-input, .t-select, .t-fld) {
+	width: 180px;
+}
+.t-field.row + .t-field.row {
+	box-shadow: inset 0 1px 0 var(--l1);
+}
+/* Modulo a due colonne: etichetta a sinistra a larghezza fissa (dialog.css: .fm-row) */
+.t-form {
+	display: grid;
+	grid-template-columns: var(--form-label, 120px) minmax(0, 1fr);
+	gap: 10px 14px;
+	align-items: start;
+}
+.t-form > .t-label {
+	padding-top: 5px;
+	font: 400 13px/1.5 var(--sans);
+	color: var(--t2);
+}
+.t-form > .t-note {
+	grid-column: 2;
+	margin-top: -6px;
+}
+
+/* ---------- Caselle e pallini (surface-el.css: .sf-el[aria-checked]) ---------- */
+.t-check,
+.t-radio {
+	position: relative;
+	display: inline-block;
+	flex: none;
+	width: 15px;
+	height: 15px;
+	margin: 0;
+	border-radius: 4px;
+	appearance: none;
+	background: light-dark(var(--card), rgba(255, 255, 255, 0.04));
+	box-shadow:
+		inset 0 0 0 1px var(--l4),
+		0 1px 1px light-dark(rgba(0, 0, 0, 0.04), transparent);
+	cursor: pointer;
+	vertical-align: -2.5px;
+	transition:
+		background var(--dur-state) var(--ease),
+		box-shadow var(--dur-state);
+}
+.t-radio {
+	border-radius: 50%;
+}
+.t-check:hover,
+.t-radio:hover {
+	box-shadow: inset 0 0 0 1px var(--t4);
+	transition:
+		background var(--dur-state) var(--ease),
+		box-shadow 0s;
+}
+.t-check:active,
+.t-radio:active {
+	background: var(--l2);
+	box-shadow: inset 0 0 0 1px var(--t3);
+	transition: none;
+}
+.t-check::after,
+.t-radio::after {
+	content: '';
+	position: absolute;
+	opacity: 0;
+	transition:
+		opacity 0.12s,
+		transform var(--dur-pop) var(--out);
+}
+.t-check::after {
+	left: 5px;
+	top: 2px;
+	width: 4px;
+	height: 8px;
+	border: solid #fff;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg) scale(0.6);
+}
+.t-radio::after {
+	left: 4.5px;
+	top: 4.5px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #fff;
+	transform: scale(0.4);
+}
+.t-check:is(:checked, :indeterminate),
+.t-radio:checked {
+	background: var(--accent-fill);
+	box-shadow:
+		inset 0 0 0 1px rgba(0, 0, 0, 0.08),
+		0 1px 2px rgb(from var(--accent) r g b / 30%);
+}
+.t-check:is(:checked, :indeterminate):active,
+.t-radio:checked:active {
+	background: color-mix(in oklab, var(--accent-fill), light-dark(black, white) 16%);
+}
+.t-check:checked::after {
+	opacity: 1;
+	transform: rotate(45deg);
+}
+.t-radio:checked::after {
+	opacity: 1;
+	transform: none;
+}
+.t-check:indeterminate::after {
+	left: 3.5px;
+	top: 6.5px;
+	width: 8px;
+	height: 2px;
+	border: 0;
+	border-radius: 1px;
+	background: #fff;
+	opacity: 1;
+	transform: none;
+}
+/* Tonda: la spunta del «fatto» sulle card della board (board.css: .bd-ck) */
+.t-check.round {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: none;
+	box-shadow: inset 0 0 0 1.5px var(--l4);
+}
+.t-check.round:hover {
+	box-shadow: inset 0 0 0 1.5px var(--t3);
+}
+.t-check.round::after {
+	left: 5.5px;
+	top: 3px;
+	border-width: 0 1.75px 1.75px 0;
+}
+.t-check.round:checked {
+	background: var(--accent-fill);
+	box-shadow: none;
+}
+.t-check:focus-visible,
+.t-radio:focus-visible,
+.t-switch:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+.t-check:disabled,
+.t-radio:disabled,
+.t-switch:disabled {
+	opacity: 0.45;
+	pointer-events: none;
+}
+/* Casella o interruttore con la sua parola: <label class="t-opt"><input class="t-check"> Testo</label> */
+.t-opt {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 22px;
+	font-size: 13px;
+	color: var(--t1);
+	cursor: pointer;
+}
+.t-opt:has(:disabled) {
+	color: var(--t3);
+	cursor: default;
+}
+.t-opt > :is(.t-check, .t-radio) {
+	vertical-align: 0;
+}
+
+/* ---------- Interruttore (surface-switch.css, prefs.css: .pf-sw) ---------- */
+/* <input type="checkbox" role="switch" class="t-switch"> */
+.t-switch {
+	--sw-w: 36px;
+	--sw-h: 22px;
+	--sw-knob: 18px;
+	--sw-held: 22px;
+	--sw-in: 2px;
+	position: relative;
+	display: inline-block;
+	flex: none;
+	width: var(--sw-w);
+	height: var(--sw-h);
+	margin: 0;
+	border-radius: 999px;
+	appearance: none;
+	background: light-dark(var(--l3), rgb(255 255 255 / 13%));
+	box-shadow: inset 0 0 0 1px var(--l1);
+	cursor: pointer;
+	vertical-align: middle;
+	transition:
+		background-color 0.25s var(--out),
+		box-shadow var(--dur-state) var(--ease);
+}
+.t-switch::after {
+	content: '';
+	position: absolute;
+	top: var(--sw-in);
+	left: var(--sw-in);
+	width: var(--sw-knob);
+	height: var(--sw-knob);
+	border-radius: 999px;
+	background: #fff;
+	box-shadow:
+		0 1px 3px rgb(0 0 0 / 25%),
+		0 0 0 0.5px rgb(0 0 0 / 6%);
+	transition:
+		left var(--dur-spring) var(--spring),
+		width var(--dur-turn) var(--out);
+}
+.t-switch:hover {
+	box-shadow: inset 0 0 0 1px var(--l2);
+}
+/* Tenuto premuto, il pomello si allarga verso il lato dove andrà */
+.t-switch:active::after {
+	width: var(--sw-held);
+}
+.t-switch:checked {
+	background: var(--accent-fill);
+	box-shadow: inset 0 0 0 1px rgb(0 0 0 / 4%);
+}
+.t-switch:checked::after {
+	left: calc(var(--sw-w) - var(--sw-knob) - var(--sw-in));
+}
+.t-switch:checked:active::after {
+	left: calc(var(--sw-w) - var(--sw-held) - var(--sw-in));
+}
+.t-switch.sm {
+	--sw-w: 26px;
+	--sw-h: 15px;
+	--sw-knob: 12px;
+	--sw-held: 15px;
+	--sw-in: 1.5px;
+}
+.t-switch.sm::after {
+	box-shadow:
+		0 0.5px 2px rgb(0 0 0 / 25%),
+		0 0 0 0.5px rgb(0 0 0 / 6%);
+}
+
+/* ---------- Segmenti (base.css: .seg.mode-seg; prefs.css: .pf-seg) ---------- */
+/*
+  <div class="t-seg" role="group"><button aria-pressed="true">Giorno</button><button>Settimana</button></div>
+  Il pollice scorre da solo: la posizione viene dal figlio acceso (fino a 6 voci), con la molla di Tern.
+  Vale anche con <label><input type="radio" class="t-sr"> Voce</label>.
+*/
+.t-seg {
+	--n: 2;
+	--i: 0;
+	position: relative;
+	display: inline-grid;
+	flex: none;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	height: var(--h-md);
+	padding: 2px;
+	border-radius: 9px;
+	background: var(--l1);
+	box-shadow: inset 0 0 0 1px var(--l1);
+}
+.t-seg::before {
+	content: '';
+	position: absolute;
+	top: 2px;
+	bottom: 2px;
+	left: 2px;
+	width: calc((100% - 4px) / var(--n));
+	border-radius: 7px;
+	background: light-dark(var(--card), var(--raise));
+	box-shadow:
+		var(--lift-thumb),
+		0 0 0 1px light-dark(var(--l1), var(--l2)),
+		var(--hi-on);
+	transform: translateX(calc(var(--i) * 100%));
+	transition: transform var(--dur-spring) var(--spring);
+}
+.t-seg > * {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	grid-auto-flow: column;
+	gap: 6px;
+	padding: 0 10px;
+	border-radius: 7px;
+	font: 500 12.5px/1 var(--sans);
+	letter-spacing: var(--track);
+	white-space: nowrap;
+	/* Tern usa t3, che su questo fondo nello scuro scende a 4,4:1 */
+	color: var(--t2);
+	cursor: pointer;
+	transition: color var(--dur-state) var(--ease);
+}
+.t-seg > *:hover {
+	color: var(--t1);
+	transition: color 0s;
+}
+.t-seg
+	> :is(
+		[aria-pressed='true'],
+		[aria-selected='true'],
+		[aria-checked='true'],
+		.on,
+		:has(input:checked)
+	) {
+	color: var(--t1);
+}
+.t-seg > * .ico {
+	width: 15px;
+	height: 15px;
+}
+.t-seg > :focus-visible,
+.t-seg > :has(input:focus-visible) {
+	box-shadow: var(--sel-ring);
+}
+.t-seg:not(
+		:has(
+			> :is(
+				[aria-pressed='true'],
+				[aria-selected='true'],
+				[aria-checked='true'],
+				.on,
+				:has(input:checked)
+			)
+		)
+	)::before {
+	opacity: 0;
+}
+.t-seg:has(> :nth-child(3):last-child) {
+	--n: 3;
+}
+.t-seg:has(> :nth-child(4):last-child) {
+	--n: 4;
+}
+.t-seg:has(> :nth-child(5):last-child) {
+	--n: 5;
+}
+.t-seg:has(> :nth-child(6):last-child) {
+	--n: 6;
+}
+.t-seg:has(
+	> :nth-child(2):is(
+			[aria-pressed='true'],
+			[aria-selected='true'],
+			[aria-checked='true'],
+			.on,
+			:has(input:checked)
+		)
+) {
+	--i: 1;
+}
+.t-seg:has(
+	> :nth-child(3):is(
+			[aria-pressed='true'],
+			[aria-selected='true'],
+			[aria-checked='true'],
+			.on,
+			:has(input:checked)
+		)
+) {
+	--i: 2;
+}
+.t-seg:has(
+	> :nth-child(4):is(
+			[aria-pressed='true'],
+			[aria-selected='true'],
+			[aria-checked='true'],
+			.on,
+			:has(input:checked)
+		)
+) {
+	--i: 3;
+}
+.t-seg:has(
+	> :nth-child(5):is(
+			[aria-pressed='true'],
+			[aria-selected='true'],
+			[aria-checked='true'],
+			.on,
+			:has(input:checked)
+		)
+) {
+	--i: 4;
+}
+.t-seg:has(
+	> :nth-child(6):is(
+			[aria-pressed='true'],
+			[aria-selected='true'],
+			[aria-checked='true'],
+			.on,
+			:has(input:checked)
+		)
+) {
+	--i: 5;
+}
+.t-seg.lg {
+	height: var(--h-lg);
+}
+.t-seg.lg > * {
+	padding: 0 12px;
+	font-size: 13px;
+}
+.t-seg.fill {
+	display: grid;
+}
+
+/* ---------- Passo (prefs.css: .pf-step) ---------- */
+/*
+  Meno, valore, più: così Tern regola un numero nelle impostazioni.
+
+  <div class="t-step" role="group" aria-label="Zoom">
+    <button type="button" data-step="down" aria-label="Diminuisci"><svg class="ico">…minus…</svg></button>
+    <input type="number" value="100" min="50" max="200" step="10" aria-label="Zoom" /><span class="t-step-unit">%</span>
+    <button type="button" data-step="up" aria-label="Aumenta"><svg class="ico">…plus…</svg></button>
+  </div>
+
+  Il valore è un campo vero: si scrive, risponde alle frecce, sta in un modulo e rispetta min, max e step.
+  tern-ui.js collega i due bottoni e li spegne ai limiti.
+  In Tern è alto 32 (.lg); la misura da 28 è mia, per stare accanto agli altri controlli.
+*/
+.t-step {
+	--step-b: 28px;
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	min-width: calc(92px + 2 * var(--step-b));
+	height: var(--h-md);
+	border-radius: var(--r-ctl);
+	background: var(--well);
+	box-shadow: inset 0 0 0 1px var(--l2);
+	transition: box-shadow var(--dur-state) var(--ease);
+}
+.t-step.lg {
+	--step-b: 30px;
+	height: var(--h-lg);
+	border-radius: 9px;
+}
+/* Dove il valore è corto e lo spazio poco: accanto a un altro campo */
+.t-step.tight {
+	min-width: 0;
+}
+.t-step > button {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: var(--step-b);
+	height: 100%;
+	border-radius: inherit;
+	color: var(--t3);
+	transition:
+		color var(--dur-state) var(--ease),
+		background-color var(--dur-state) var(--ease),
+		transform var(--dur-release) var(--out);
+}
+/* I bottoni stanno ai due capi; valore e unità restano insieme al centro */
+.t-step > button:first-child {
+	margin-right: auto;
+}
+.t-step > button:last-child {
+	margin-left: auto;
+}
+.t-step > button:hover {
+	color: var(--t1);
+	background: var(--l1);
+	transition:
+		color 0s,
+		background-color 0s,
+		transform var(--dur-release) var(--out);
+}
+.t-step > button:active {
+	background: var(--l2);
+	transform: scale(0.97);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-step > button:disabled {
+	color: var(--t4);
+	pointer-events: none;
+}
+.t-step > button .ico {
+	width: 14px;
+	height: 14px;
+}
+.t-step > input {
+	min-width: 1ch;
+	height: 100%;
+	margin: 0 0 0 4px;
+	padding: 0;
+	border: 0;
+	appearance: textfield;
+	field-sizing: content;
+	font: 12.5px var(--mono);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0;
+	text-align: center;
+	color: var(--t1);
+	background: none;
+}
+.t-step > input::-webkit-inner-spin-button,
+.t-step > input::-webkit-outer-spin-button {
+	margin: 0;
+	appearance: none;
+}
+/* Dove il campo non sa prendere la larghezza del contenuto (Firefox) */
+@supports not (field-sizing: content) {
+	.t-step > input {
+		width: 5ch;
+	}
+}
+.t-step > input:focus-visible {
+	box-shadow: none;
+}
+.t-step-unit {
+	flex: none;
+	margin: 0 4px 0 1px;
+	font: 12.5px var(--mono);
+	letter-spacing: 0;
+	color: var(--t1);
+	-webkit-user-select: none;
+	user-select: none;
+}
+.t-step:has(> input:focus) {
+	box-shadow: var(--field-ring);
+}
+.t-step:has(> [aria-invalid='true']) {
+	box-shadow: inset 0 0 0 1px rgb(from var(--bad) r g b / 60%);
+}
+.t-step:has(> [aria-invalid='true']:focus) {
+	box-shadow: var(--field-bad);
+}
+.t-step:has(> input:disabled) {
+	opacity: 0.45;
+	pointer-events: none;
+}
+
+/* ---------- Cursore (controls.css: .sld; surface-slider.css) ---------- */
+/*
+  <input type="range" class="t-range" min="0" max="100" style="--p: 40%">
+  In Chromium e Safari il tratto pieno segue --p: lo tiene aggiornato tern-ui.js. Firefox lo fa da solo.
+*/
+.t-range {
+	--p: 50%;
+	width: 112px;
+	height: 20px;
+	margin: 0;
+	appearance: none;
+	background: none;
+	cursor: pointer;
+}
+.t-range::-webkit-slider-runnable-track {
+	height: 4px;
+	border-radius: 999px;
+	background:
+		linear-gradient(var(--t3) 0 0) 0 / var(--p) 100% no-repeat,
+		var(--l2);
+}
+.t-range::-moz-range-track {
+	height: 4px;
+	border-radius: 999px;
+	background: var(--l2);
+}
+.t-range::-moz-range-progress {
+	height: 4px;
+	border-radius: 999px;
+	background: var(--t3);
+}
+.t-range::-webkit-slider-thumb {
+	width: 14px;
+	height: 14px;
+	margin-top: -5px;
+	border-radius: 999px;
+	appearance: none;
+	background: light-dark(#fff, #e4e4e8);
+	box-shadow:
+		0 0 0 0.5px rgba(0, 0, 0, 0.2),
+		0 1px 3px rgba(0, 0, 0, 0.18);
+	transition:
+		transform var(--dur-release) var(--out),
+		box-shadow var(--dur-state) var(--ease);
+}
+.t-range::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	border: 0;
+	border-radius: 999px;
+	background: light-dark(#fff, #e4e4e8);
+	box-shadow:
+		0 0 0 0.5px rgba(0, 0, 0, 0.2),
+		0 1px 3px rgba(0, 0, 0, 0.18);
+}
+.t-range:hover::-webkit-slider-runnable-track {
+	background:
+		linear-gradient(var(--t2) 0 0) 0 / var(--p) 100% no-repeat,
+		var(--l2);
+}
+.t-range:active::-webkit-slider-thumb {
+	transform: scale(1.14);
+	transition: transform var(--dur-press) var(--out);
+}
+.t-range:focus-visible {
+	box-shadow: none;
+}
+.t-range:focus-visible::-webkit-slider-thumb {
+	box-shadow: var(--sel-ring);
+}
+.t-range:focus-visible::-moz-range-thumb {
+	box-shadow: var(--sel-ring);
+}
+.t-range:disabled {
+	opacity: 0.45;
+	pointer-events: none;
+}
+.t-range.accent::-webkit-slider-runnable-track {
+	background:
+		linear-gradient(var(--accent) 0 0) 0 / var(--p) 100% no-repeat,
+		var(--l2);
+}
+.t-range.accent::-moz-range-progress {
+	background: var(--accent);
+}

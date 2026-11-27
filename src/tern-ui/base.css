@@ -1,0 +1,193 @@
+/*
+  tern-ui · base
+  Reset e tipografia come in Tern (theme.css): Geist 14/1.5 su carta calda, inchiostro t1,
+  anello di fuoco doppio, scrollbar sottili, selezione azzurra al 22%.
+  Diversamente da Tern, che è un'app, il testo resta selezionabile: solo i controlli non lo sono.
+*/
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--l3) transparent;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	font: var(--text-body);
+	letter-spacing: var(--track);
+	color: var(--t1);
+	background: var(--page);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	caret-color: var(--accent);
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+	letter-spacing: inherit;
+}
+
+button {
+	padding: 0;
+	border: 0;
+	background: none;
+	text-align: inherit;
+	cursor: pointer;
+}
+button:disabled,
+[aria-disabled='true'] {
+	cursor: default;
+}
+button,
+summary,
+label,
+[role='tab'],
+[role='button'],
+[role='option'],
+[role='menuitem'] {
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+figure,
+blockquote,
+dl,
+dd {
+	margin: 0;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font: inherit;
+	text-wrap: balance;
+}
+
+a {
+	color: var(--accent-ink);
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+	text-decoration-color: rgb(from var(--accent) r g b / 45%);
+	text-underline-offset: 2px;
+}
+
+code,
+kbd,
+pre,
+samp,
+.mono {
+	font-family: var(--mono);
+	letter-spacing: 0;
+}
+.num {
+	font-variant-numeric: tabular-nums;
+}
+
+hr {
+	height: 1px;
+	margin: 0;
+	border: 0;
+	background: var(--l2);
+}
+
+mark {
+	border-radius: 3px;
+	color: inherit;
+	background: rgb(from var(--accent) r g b / 16%);
+	box-shadow: 0 0 0 1px rgb(from var(--accent) r g b / 10%);
+}
+
+::selection {
+	background: rgb(from var(--accent) r g b / 22%);
+}
+
+/* Tern scrive il segnaposto in t4 (2:1 sul bianco): qui è t3, che si legge */
+::placeholder {
+	color: var(--t3);
+	opacity: 1;
+}
+
+/* Fuoco: mai il contorno del browser. Un filo d'accento e un alone al 18%, solo da tastiera. */
+:focus {
+	outline: none;
+}
+:focus-visible {
+	box-shadow: var(--sel-ring);
+}
+
+[hidden] {
+	display: none !important;
+}
+
+svg {
+	display: block;
+	flex: none;
+}
+
+/*
+  Icone a tratto: griglia 16, tratto 1,45, terminazioni e giunti tondi, colore del testo.
+  Rimpicciolite, il tratto si ispessisce per restare di ~1px sullo schermo:
+  14–15px tratto 1,45 · 12–13px 1,45 · 10–11px 2 (spunte, croci, frecce d'ordinamento).
+*/
+.ico {
+	width: 16px;
+	height: 16px;
+	stroke: currentColor;
+	fill: none;
+	stroke-width: 1.45;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* Solo per chi legge con lo schermo parlante */
+.t-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0s !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0s !important;
+	}
+}
+@media (prefers-reduced-transparency: reduce) {
+	*,
+	*::before,
+	*::after {
+		-webkit-backdrop-filter: none !important;
+		backdrop-filter: none !important;
+	}
+}

@@ -1,0 +1,9 @@
+/* tern-ui: un solo link per avere tutto. L'ordine conta: caratteri, token, base, poi i componenti. */
+@import url('./fonts.css');
+@import url('./tokens.css');
+@import url('./base.css');
+@import url('./controls.css');
+@import url('./nav.css');
+@import url('./surfaces.css');
+@import url('./overlays.css');
+@import url('./layout.css');

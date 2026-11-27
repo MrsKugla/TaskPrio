@@ -3,12 +3,15 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Progetto } from "./regole";
 
 export type Tema = "chiaro" | "scuro";
+// Aspetto dell'interfaccia: «arcade» (tasti 3D e CRT) o «tern» (i componenti di tern-ui).
+export type Stile = "arcade" | "tern";
 
-// «giorniPrestoAlta», «tema» e «crt» sono assenti finché non si cambiano.
+// «giorniPrestoAlta», «stile», «tema» e «crt» sono assenti finché non si cambiano.
 export type DatiSalvati = {
   progetti: Progetto[];
   ultimoProgettoId: string | null;
   giorniPrestoAlta: number | null;
+  stile: Stile | null;
   tema: Tema | null;
   // Intensità dell'effetto CRT, da 0 (spento) a 100.
   crt: number | null;
@@ -19,6 +22,7 @@ export const salvaProgetto = (progetto: Progetto) => invoke<void>("salva_progett
 export const eliminaProgetto = (id: string) => invoke<void>("elimina_progetto", { id });
 export const impostaUltimoProgetto = (id: string | null) => invoke<void>("imposta_ultimo_progetto", { id });
 export const impostaGiorniPrestoAlta = (giorni: number) => invoke<void>("imposta_giorni_presto_alta", { giorni });
+export const impostaStile = (stile: Stile) => invoke<void>("imposta_stile", { stile });
 export const impostaTema = (tema: Tema) => invoke<void>("imposta_tema", { tema });
 export const impostaCrt = (crt: number) => invoke<void>("imposta_crt", { crt });
 export const esportaDati = (percorso: string) => invoke<void>("esporta_dati", { percorso });

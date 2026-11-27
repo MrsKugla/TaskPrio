@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, type Update } from "@tauri-apps/plugin-updater";
+import { Icona, TERN } from "./schermo";
 
 type Stato =
   | { fase: "nessuno" }
@@ -41,28 +42,31 @@ export function Aggiornamento() {
 
   if (stato.fase === "nessuno") return null;
   return (
-    <div className="aggiornamento" role="status">
+    <div className="aggiornamento t-callout" data-tone={stato.fase === "errore" ? "error" : "accent"} role="status">
+      <Icona nome={stato.fase === "errore" ? "warn" : "download"} />
       {stato.fase === "disponibile" && (
         <>
-          <span>È disponibile TaskPrio {stato.update.version}.</span>
-          <button onClick={() => installa(stato.update)}>Aggiorna e riavvia</button>
-          <button className="chiudi" onClick={() => setStato({ fase: "nessuno" })} aria-label="Più tardi">
-            ×
+          <span className="testo">È disponibile TaskPrio {stato.update.version}.</span>
+          <button className="t-btn sm primary" onClick={() => installa(stato.update)}>
+            Aggiorna e riavvia
+          </button>
+          <button className="chiudi t-btn icon sm quiet" onClick={() => setStato({ fase: "nessuno" })} aria-label="Più tardi">
+            {TERN ? <Icona nome="x" /> : "×"}
           </button>
         </>
       )}
       {stato.fase === "scarico" && (
-        <span>
+        <span className="testo">
           Scarico TaskPrio {stato.versione}… {stato.percento !== null && `${stato.percento}%`}
         </span>
       )}
       {stato.fase === "errore" && (
         <>
-          <span>
+          <span className="testo">
             Aggiornamento a {stato.versione} non riuscito: {stato.messaggio}
           </span>
-          <button className="chiudi" onClick={() => setStato({ fase: "nessuno" })} aria-label="Chiudi avviso">
-            ×
+          <button className="chiudi t-btn icon sm quiet" onClick={() => setStato({ fase: "nessuno" })} aria-label="Chiudi avviso">
+            {TERN ? <Icona nome="x" /> : "×"}
           </button>
         </>
       )}
